@@ -264,18 +264,64 @@ function refreshProviderSelectOptions() {
 }
 
 async function loadPublicAccountTransactions(account) {
-  const rows = await fetchGvizSheet('TRANSACTION LOG', 'select B,C,D,E', 1);
+  // Read A:E so paired transaction IDs (-D / -C) can be matched.
+  // This lets the public ledger show who sent a credit and who received a debit.
+  const rows = await fetchGvizSheet('TRANSACTION LOG', 'select A,B,C,D,E', 1);
   const target = normalizeAccount(account);
 
-  return rows
+  const allTransactions = rows
     .map(row => ({
-      date: cellText(row[0]),
-      accountNumber: cellText(row[1]),
-      log: cellText(row[2]),
-      description: cellText(row[3])
+      txId: cellText(row[0]),
+      date: cellText(row[1]),
+      accountNumber: cellText(row[2]),
+      log: cellText(row[3]),
+      description: cellText(row[4])
     }))
+    .filter(row => row.accountNumber);
+
+  const byTxId = new Map(
+    allTransactions
+      .filter(row => row.txId)
+      .map(row => [row.txId, row])
+  );
+
+  return allTransactions
     .filter(row => normalizeAccount(row.accountNumber) === target)
+    .map(row => ({
+      ...row,
+      ...resolveTransactionCounterparty(row, byTxId)
+    }))
     .reverse();
+}
+
+function resolveTransactionCounterparty(row, byTxId) {
+  const txId = String(row.txId || '').trim();
+  const amount = parseMoney(row.log);
+
+  let role = amount < 0 ? 'Recipient' : amount > 0 ? 'Sender' : '';
+  let counterpart = null;
+
+  if (txId && /-D$/i.test(txId)) {
+    role = 'Recipient';
+    counterpart = byTxId.get(txId.replace(/-D$/i, '-C')) || null;
+  } else if (txId && /-C$/i.test(txId)) {
+    role = 'Sender';
+    counterpart = byTxId.get(txId.replace(/-C$/i, '-D')) || null;
+  }
+
+  const counterpartyAccount = counterpart
+    ? normalizeAccount(counterpart.accountNumber)
+    : '';
+
+  const masterRecord = counterpartyAccount
+    ? state.masterMap.get(counterpartyAccount)
+    : null;
+
+  return {
+    counterpartyRole: role,
+    counterpartyAccount,
+    counterpartyName: masterRecord?.name || ''
+  };
 }
 
 function populateAllAccountStatusFilter() {
@@ -407,15 +453,35 @@ function renderTransactions(rows) {
 
   rows.forEach(row => {
     const amount = parseMoney(row.log);
+    const counterparty = transactionCounterpartyHtml(row, amount);
     const tr = document.createElement('tr');
     tr.innerHTML = `
       <td>${escapeHtml(formatDateDisplay(row.date || row.transactionDate || ''))}</td>
       <td><span class="log-pill">${escapeHtml(transactionLabel(amount))}</span></td>
+      <td>${counterparty}</td>
       <td>${escapeHtml(row.description || row.keterangan || '—')}</td>
       <td class="money-col ${amount < 0 ? 'amount-negative' : 'amount-positive'}">${escapeHtml(formatCurrency(amount, true))}</td>
     `;
     els.transactionTableBody.appendChild(tr);
   });
+}
+
+function transactionCounterpartyHtml(row, amount) {
+  const role = row.counterpartyRole || (amount < 0 ? 'Recipient' : amount > 0 ? 'Sender' : '');
+  const name = row.counterpartyName || '';
+  const account = row.counterpartyAccount || '';
+
+  if (!role) {
+    return '<span class="counterparty-empty">—</span>';
+  }
+
+  return `
+    <div class="counterparty-cell">
+      <span>${escapeHtml(role)}</span>
+      <strong>${escapeHtml(name || '—')}</strong>
+      ${account ? `<small>${escapeHtml(account)}</small>` : ''}
+    </div>
+  `;
 }
 
 function transactionLabel(amount) {
