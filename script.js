@@ -28,6 +28,12 @@ const state = {
     TRANSFER: 'STANDARD',
     SALARY: 'STANDARD',
     REWARD: 'STANDARD'
+  },
+  descriptionModes: {
+    LAST_SALDO: 'MULTI',
+    TRANSFER: 'MULTI',
+    SALARY: 'MULTI',
+    REWARD: 'MULTI'
   }
 };
 
@@ -44,6 +50,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   setDefaultMonth();
   renderAllBatchGrids();
   ['TRANSFER','SALARY','REWARD'].forEach(applyBatchModeVisuals);
+  ['LAST_SALDO','TRANSFER','SALARY','REWARD'].forEach(applyDescriptionModeVisuals);
 
   try {
     await Promise.all([loadMasterData(), loadStaffDirectory()]);
@@ -126,6 +133,10 @@ function bindGlobalEvents() {
 
   $$('[data-mode-type][data-mode]').forEach(button => {
     button.addEventListener('click', () => setBatchMode(button.dataset.modeType, button.dataset.mode));
+  });
+
+  $$('[data-desc-type][data-desc-mode]').forEach(button => {
+    button.addEventListener('click', () => setDescriptionMode(button.dataset.descType, button.dataset.descMode));
   });
 
   const bulkSender = $('.js-bulk-sender-account');
@@ -692,6 +703,7 @@ function appendBatchRow(type) {
   container.appendChild(row);
   bindBatchRowEvents(row, type);
   applyBatchModeVisuals(type);
+  applyDescriptionModeVisuals(type);
   return row;
 }
 
@@ -735,6 +747,8 @@ function resetBatchRows(type, count) {
   for (let i = 0; i < target; i++) appendBatchRow(type);
   const input = document.getElementById(rowInputIdForType(type));
   if (input) input.value = String(target);
+  resetSingleDescription(type);
+  applyDescriptionModeVisuals(type);
 }
 
 function setBatchMode(type, mode) {
@@ -768,6 +782,84 @@ function applyBatchModeVisuals(type) {
 function isBulkMode(type) {
   if (type === 'LAST_SALDO') return false;
   return state.batchModes[type] === 'BULK';
+}
+
+function setDescriptionMode(type, mode) {
+  mode = mode === 'SINGLE' ? 'SINGLE' : 'MULTI';
+  const previous = state.descriptionModes[type] || 'MULTI';
+
+  // When SINGLE is opened for the first time, use the first existing
+  // row description as a convenience seed. Existing row descriptions
+  // themselves are never changed or erased.
+  if (mode === 'SINGLE' && previous !== 'SINGLE') {
+    seedSingleDescriptionFromRows(type);
+  }
+
+  state.descriptionModes[type] = mode;
+  applyDescriptionModeVisuals(type);
+}
+
+function applyDescriptionModeVisuals(type) {
+  const config = batchConfig(type);
+  const panel = document.getElementById(config?.panelId);
+  if (!panel) return;
+
+  const mode = state.descriptionModes[type] || 'MULTI';
+  panel.classList.toggle('single-description-mode', mode === 'SINGLE');
+
+  $$(`[data-desc-type="${type}"][data-desc-mode]`).forEach(button => {
+    button.classList.toggle('active', button.dataset.descMode === mode);
+  });
+
+  const singleBar = $(`[data-single-desc-config="${type}"]`);
+  if (singleBar) singleBar.classList.toggle('is-hidden', mode !== 'SINGLE');
+}
+
+function isSingleDescriptionMode(type) {
+  return state.descriptionModes[type] === 'SINGLE';
+}
+
+function singleDescriptionInputForType(type) {
+  const id = {
+    LAST_SALDO: 'lastBalanceSingleDescription',
+    TRANSFER: 'transferSingleDescription',
+    SALARY: 'salarySingleDescription',
+    REWARD: 'rewardSingleDescription'
+  }[type];
+
+  return id ? document.getElementById(id) : null;
+}
+
+function getSingleDescription(type) {
+  return singleDescriptionInputForType(type)?.value.trim() || '';
+}
+
+function seedSingleDescriptionFromRows(type) {
+  const sharedInput = singleDescriptionInputForType(type);
+  if (!sharedInput || sharedInput.value.trim()) return;
+
+  const config = batchConfig(type);
+  const container = document.getElementById(config.gridId);
+  if (!container) return;
+
+  const firstFilled = $$('.js-description', container)
+    .map(input => input.value.trim())
+    .find(Boolean);
+
+  if (firstFilled) {
+    sharedInput.value = firstFilled;
+    return;
+  }
+
+  if (type === 'LAST_SALDO') {
+    sharedInput.value = 'Saldo akhir';
+  }
+}
+
+function resetSingleDescription(type) {
+  const input = singleDescriptionInputForType(type);
+  if (!input) return;
+  input.value = type === 'LAST_SALDO' ? 'Saldo akhir' : '';
 }
 
 function seedBulkSourceFromRows(type) {
@@ -873,7 +965,7 @@ function buildBatchRowHtml(type, number) {
   const index = `<div class="batch-index">${String(number).padStart(2, '0')}</div>`;
   const date = fieldHtml('Date', `<input class="batch-input js-date" type="date" value="${today}">`);
   const amount = fieldHtml('Amount', `<div class="currency-input"><span>${CONFIG.CURRENCY}</span><input class="js-amount" type="text" inputmode="numeric" placeholder="0"></div>`);
-  const description = fieldHtml('Description', `<input class="batch-input js-description" type="text" placeholder="Required">`);
+  const description = fieldHtml('Description', `<input class="batch-input js-description" type="text" placeholder="Required">`, 'description-field');
 
   if (type === 'LAST_SALDO') {
     return [
@@ -882,7 +974,7 @@ function buildBatchRowHtml(type, number) {
       accountFieldHtml('Recipient account', 'js-recipient-account'),
       readonlyNameFieldHtml('Recipient name', 'js-recipient-name'),
       amount,
-      fieldHtml('Description', `<input class="batch-input js-description" type="text" value="Saldo akhir" placeholder="Required">`)
+      fieldHtml('Description', `<input class="batch-input js-description" type="text" value="Saldo akhir" placeholder="Required">`, 'description-field')
     ].join('');
   }
 
@@ -929,33 +1021,46 @@ function readonlyNameFieldHtml(label, className, extraClass = '') {
 
 function bindBatchRowEvents(row, type) {
   $$('.js-amount', row).forEach(input => input.addEventListener('input', formatMoneyInput));
+
   $$('.js-sender-account, .js-recipient-account', row).forEach(input => {
     input.addEventListener('input', () => resolveBatchAccount(row, input, type));
     input.addEventListener('blur', () => resolveBatchAccount(row, input, type));
-    input.addEventListener('paste', event => handleMultiRowAccountPaste(event, row, input, type));
   });
+
+  // Spreadsheet-style multi-row paste is available on every row-based input:
+  // Date, Sender/Recipient Account, Amount, and Description.
+  $$('.js-date, .js-sender-account, .js-recipient-account, .js-amount, .js-description', row).forEach(input => {
+    input.addEventListener('paste', event => handleMultiRowFieldPaste(event, row, input, type));
+  });
+
   const provider = $('.js-provider-account', row);
   if (provider) provider.addEventListener('change', () => validateWholeBatchRow(row, type));
 }
 
 /**
- * Spreadsheet-style multi-row paste for account-number fields.
+ * Spreadsheet-style multi-row paste for every editable transaction field.
  *
- * Example clipboard:
- *   ACC001
- *   ACC002
- *   ACC003
+ * Example:
+ *   1000
+ *   2500
+ *   3000
  *
- * Pasting it into Recipient Account row 02 fills rows 02, 03, and 04.
- * If the grid is too short, the missing rows are created automatically.
- * Existing values in all other fields are preserved.
+ * Paste those values into Amount on row 02 and they automatically populate
+ * Amount on rows 02, 03, and 04. The same behavior works for Date,
+ * Sender/Recipient Account, and Description.
+ *
+ * If the grid is too short, missing rows are added automatically.
+ * Existing values in unrelated fields are never cleared.
  */
-function handleMultiRowAccountPaste(event, sourceRow, sourceInput, type) {
+function handleMultiRowFieldPaste(event, sourceRow, sourceInput, type) {
   const clipboardText = event.clipboardData?.getData('text') || '';
-  const accounts = parsePastedAccountValues(clipboardText);
+  const values = parsePastedRowValues(clipboardText);
 
-  // Keep normal browser paste behavior for a single value.
-  if (accounts.length <= 1) return;
+  // Preserve normal browser paste behavior for a single value.
+  if (values.length <= 1) return;
+
+  const targetSelector = getBatchPasteTargetSelector(sourceInput);
+  if (!targetSelector) return;
 
   event.preventDefault();
 
@@ -967,27 +1072,37 @@ function handleMultiRowAccountPaste(event, sourceRow, sourceInput, type) {
   const startIndex = rows.indexOf(sourceRow);
   if (startIndex < 0) return;
 
-  const targetClass = sourceInput.classList.contains('js-sender-account')
-    ? '.js-sender-account'
-    : '.js-recipient-account';
-
-  const requiredRowCount = startIndex + accounts.length;
+  const requiredRowCount = startIndex + values.length;
   ensureBatchRowCount(type, requiredRowCount);
 
-  // Re-read after auto-expanding the grid.
+  // Re-read after the grid may have been expanded.
   rows = $$('.batch-row', container);
 
   let lastInput = null;
+  let appliedCount = 0;
+  let invalidDateCount = 0;
 
-  accounts.forEach((account, offset) => {
+  values.forEach((value, offset) => {
     const row = rows[startIndex + offset];
     if (!row) return;
 
-    const input = $(targetClass, row);
+    const input = $(targetSelector, row);
     if (!input) return;
 
-    input.value = account;
-    resolveBatchAccount(row, input, type);
+    // Blank source rows keep their position but do not erase existing data.
+    if (String(value || '').trim() === '') {
+      lastInput = input;
+      return;
+    }
+
+    const result = applyPastedValueToBatchField(input, value, row, type);
+
+    if (result === 'invalid-date') {
+      invalidDateCount++;
+    } else if (result) {
+      appliedCount++;
+    }
+
     lastInput = input;
   });
 
@@ -998,15 +1113,127 @@ function handleMultiRowAccountPaste(event, sourceRow, sourceInput, type) {
 
   if (lastInput) lastInput.focus();
 
-  toast(`${accounts.length} account numbers pasted into consecutive rows.`, 'success');
+  const fieldLabel = getBatchPasteFieldLabel(sourceInput);
+
+  if (appliedCount) {
+    toast(`${appliedCount} ${fieldLabel} value${appliedCount === 1 ? '' : 's'} pasted into consecutive rows.`, 'success');
+  }
+
+  if (invalidDateCount) {
+    toast(`${invalidDateCount} pasted date${invalidDateCount === 1 ? '' : 's'} could not be recognized and were left unchanged.`, 'error');
+  }
 }
 
-function parsePastedAccountValues(text) {
-  return String(text || '')
-    .replace(/\r/g, '')
-    .split(/[\n\t]+/)
-    .map(value => value.trim())
-    .filter(Boolean);
+function getBatchPasteTargetSelector(input) {
+  if (input.classList.contains('js-date')) return '.js-date';
+  if (input.classList.contains('js-sender-account')) return '.js-sender-account';
+  if (input.classList.contains('js-recipient-account')) return '.js-recipient-account';
+  if (input.classList.contains('js-amount')) return '.js-amount';
+  if (input.classList.contains('js-description')) return '.js-description';
+  return '';
+}
+
+function getBatchPasteFieldLabel(input) {
+  if (input.classList.contains('js-date')) return 'date';
+  if (input.classList.contains('js-sender-account')) return 'sender account';
+  if (input.classList.contains('js-recipient-account')) return 'recipient account';
+  if (input.classList.contains('js-amount')) return 'amount';
+  if (input.classList.contains('js-description')) return 'description';
+  return 'field';
+}
+
+function applyPastedValueToBatchField(input, value, row, type) {
+  const text = String(value ?? '').trim();
+
+  if (input.classList.contains('js-date')) {
+    const normalized = normalizePastedDateValue(text);
+    if (!normalized) return 'invalid-date';
+    input.value = normalized;
+    return true;
+  }
+
+  if (input.classList.contains('js-amount')) {
+    const raw = text.replace(/[^0-9]/g, '');
+    if (!raw) return false;
+    input.dataset.rawValue = raw;
+    input.value = Number(raw).toLocaleString('en-US');
+    return true;
+  }
+
+  if (
+    input.classList.contains('js-sender-account') ||
+    input.classList.contains('js-recipient-account')
+  ) {
+    input.value = text;
+    resolveBatchAccount(row, input, type);
+    return true;
+  }
+
+  if (input.classList.contains('js-description')) {
+    input.value = text;
+    return true;
+  }
+
+  input.value = text;
+  return true;
+}
+
+/**
+ * Copying one spreadsheet column normally produces one line per row.
+ * Tabs are also accepted so a copied horizontal run still behaves as
+ * a vertical paste, matching the site's row-by-row input model.
+ *
+ * Empty values in the middle are preserved as row positions and do
+ * not erase existing form data.
+ */
+function parsePastedRowValues(text) {
+  const normalized = String(text || '').replace(/\r/g, '');
+  const values = normalized
+    .split(/[\n\t]/)
+    .map(value => value.trim());
+
+  // Clipboard selections commonly end with a newline. Remove only trailing
+  // empty cells so they do not create unnecessary extra transaction rows.
+  while (values.length && values[values.length - 1] === '') {
+    values.pop();
+  }
+
+  return values;
+}
+
+function normalizePastedDateValue(value) {
+  const text = String(value || '').trim();
+  if (!text) return '';
+
+  // Native HTML date value.
+  if (/^\d{4}-\d{2}-\d{2}$/.test(text)) {
+    return normalizeDateForInput(text);
+  }
+
+  // Indonesian / common spreadsheet style: DD/MM/YYYY or DD-MM-YYYY.
+  const dayFirst = text.match(/^(\d{1,2})[\/-](\d{1,2})[\/-](\d{4})$/);
+  if (dayFirst) {
+    const day = Number(dayFirst[1]);
+    const month = Number(dayFirst[2]);
+    const year = Number(dayFirst[3]);
+
+    const date = new Date(year, month - 1, day);
+    if (
+      date.getFullYear() === year &&
+      date.getMonth() === month - 1 &&
+      date.getDate() === day
+    ) {
+      return dateInputValue(date);
+    }
+  }
+
+  // Fallback for formats such as "26 Aug 2026" or "August 26, 2026".
+  const parsed = new Date(text);
+  if (!Number.isNaN(parsed.getTime())) {
+    return dateInputValue(parsed);
+  }
+
+  return '';
 }
 
 function resolveBatchAccount(row, input, type) {
@@ -1140,7 +1367,9 @@ function extractBatchRow(type, row) {
   const date = $('.js-date', row)?.value || '';
   const amountRaw = $('.js-amount', row)?.dataset.rawValue || $('.js-amount', row)?.value.replace(/,/g, '') || '';
   const amount = Number(amountRaw);
-  const description = $('.js-description', row)?.value.trim() || '';
+  const rowDescription = $('.js-description', row)?.value.trim() || '';
+  const singleDescription = isSingleDescriptionMode(type);
+  const description = singleDescription ? getSingleDescription(type) : rowDescription;
   const bulk = isBulkMode(type);
 
   const recipientValue = $('.js-recipient-account', row)?.value.trim() || '';
@@ -1155,8 +1384,18 @@ function extractBatchRow(type, row) {
           : rowProviderValue)
       : '';
 
-  // Default date and Last Saldo's default description do not make an unused row active.
-  const meaningful = Boolean(recipientValue || amountRaw || (description && !(type === 'LAST_SALDO' && description === 'Saldo akhir')) || (!bulk && sourceValue));
+  // A shared SINGLE DESCRIPTION must not make every blank row active.
+  // In MULTI mode, a manually entered per-row description still counts as row activity.
+  const rowDescriptionIsMeaningful = !singleDescription &&
+    Boolean(rowDescription && !(type === 'LAST_SALDO' && rowDescription === 'Saldo akhir'));
+
+  const meaningful = Boolean(
+    recipientValue ||
+    amountRaw ||
+    rowDescriptionIsMeaningful ||
+    (!bulk && sourceValue)
+  );
+
   if (!meaningful) return null;
 
   if (!date) throw new Error('Every used row must have a date.');

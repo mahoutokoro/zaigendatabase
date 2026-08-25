@@ -296,8 +296,10 @@ td { padding: 18px 16px; border-bottom: 1px solid rgba(141,100,30,.11); font-siz
   gap: 12px;
   flex-wrap: wrap;
 }
-.mode-control { display: grid; gap: 7px; }
+.mode-control,
+.description-mode-control { display: grid; gap: 7px; }
 .mode-control > span,
+.description-mode-control > span,
 .bulk-field > span {
   font-size: 9px;
   text-transform: uppercase;
@@ -873,4 +875,82 @@ td { padding: 18px 16px; border-bottom: 1px solid rgba(141,100,30,.11); font-siz
   .row-count-input { width: 120px; }
   .bulk-config { padding: 14px; }
   .bulk-config-copy > strong { font-size: 22px; }
+}
+
+/* =========================================================
+   SINGLE / MULTI DESCRIPTION MODE
+========================================================= */
+
+.single-desc-config {
+  margin: 0 0 14px;
+  padding: 14px 16px;
+  display: grid;
+  grid-template-columns: minmax(220px, .8fr) minmax(320px, 1.4fr);
+  gap: 16px;
+  align-items: center;
+  border: 1px solid rgba(200,154,67,.28);
+  border-radius: 16px;
+  background:
+    linear-gradient(135deg, rgba(255,255,255,.86), rgba(245,239,212,.82));
+  box-shadow: 0 10px 26px rgba(8,19,26,.05);
+}
+
+.single-desc-copy {
+  display: grid;
+  gap: 4px;
+}
+
+.single-desc-copy > span,
+.single-desc-field > span {
+  font-size: 9px;
+  text-transform: uppercase;
+  letter-spacing: .12em;
+  color: var(--gold-deep);
+  font-weight: 800;
+}
+
+.single-desc-copy > small {
+  color: var(--muted);
+  font-size: 10px;
+  line-height: 1.45;
+}
+
+.single-desc-field {
+  display: grid;
+  gap: 6px;
+}
+
+.single-desc-field .batch-input {
+  height: 44px;
+  border-color: rgba(141,100,30,.26);
+  background: rgba(255,255,255,.94);
+}
+
+.teller-panel.single-description-mode .description-field {
+  display: none;
+}
+
+@media (max-width: 780px) {
+  .single-desc-config {
+    grid-template-columns: 1fr;
+    align-items: stretch;
+  }
+
+  .description-mode-control {
+    flex: 1 1 auto;
+  }
+
+  .description-mode-control .mode-switch {
+    width: 100%;
+  }
+
+  .description-mode-control .mode-option {
+    flex: 1;
+  }
+}
+
+@media (max-width: 520px) {
+  .single-desc-config {
+    padding: 13px;
+  }
 }

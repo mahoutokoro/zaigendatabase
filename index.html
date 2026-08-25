@@ -231,11 +231,28 @@
               <p>Single-sided balance migration. No sender account is required.</p>
             </div>
             <div class="panel-controls">
+              <div class="description-mode-control">
+                <span>Description</span>
+                <div class="mode-switch" role="group" aria-label="Description mode">
+                  <button class="mode-option" data-desc-type="LAST_SALDO" data-desc-mode="SINGLE" type="button">SINGLE DESC</button>
+                  <button class="mode-option active" data-desc-type="LAST_SALDO" data-desc-mode="MULTI" type="button">MULTI DESC</button>
+                </div>
+              </div>
               <div class="row-count-control">
                 <label for="lastBalanceRows">Rows</label>
                 <input id="lastBalanceRows" class="row-count-input" type="number" min="1" step="1" value="5" inputmode="numeric" />
               </div>
             </div>
+          </div>
+          <div id="lastBalanceSingleDescBar" class="single-desc-config is-hidden" data-single-desc-config="LAST_SALDO">
+            <div class="single-desc-copy">
+              <span>SINGLE DESCRIPTION</span>
+              <small>This description will be applied to every active transaction row.</small>
+            </div>
+            <label class="single-desc-field">
+              <span>Description</span>
+              <input id="lastBalanceSingleDescription" class="batch-input js-single-description" data-desc-type="LAST_SALDO" type="text" value="Saldo akhir" placeholder="Required" />
+            </label>
           </div>
           <div id="lastBalanceGrid" class="batch-grid"></div>
           <div class="batch-row-actions">
@@ -265,6 +282,13 @@
                   <button class="mode-option" data-mode-type="TRANSFER" data-mode="BULK" type="button">BULK</button>
                 </div>
               </div>
+              <div class="description-mode-control">
+                <span>Description</span>
+                <div class="mode-switch" role="group" aria-label="Description mode">
+                  <button class="mode-option" data-desc-type="TRANSFER" data-desc-mode="SINGLE" type="button">SINGLE DESC</button>
+                  <button class="mode-option active" data-desc-type="TRANSFER" data-desc-mode="MULTI" type="button">MULTI DESC</button>
+                </div>
+              </div>
               <div class="row-count-control">
                 <label for="transferRows">Rows</label>
                 <input id="transferRows" class="row-count-input" type="number" min="1" step="1" value="5" inputmode="numeric" />
@@ -288,6 +312,16 @@
                 <input id="transferBulkSenderName" class="batch-input" type="text" readonly placeholder="Auto-filled" />
               </label>
             </div>
+          </div>
+          <div id="transferSingleDescBar" class="single-desc-config is-hidden" data-single-desc-config="TRANSFER">
+            <div class="single-desc-copy">
+              <span>SINGLE DESCRIPTION</span>
+              <small>This description will be applied to every active transaction row.</small>
+            </div>
+            <label class="single-desc-field">
+              <span>Description</span>
+              <input id="transferSingleDescription" class="batch-input js-single-description" data-desc-type="TRANSFER" type="text" placeholder="Required" />
+            </label>
           </div>
           <div id="transferGrid" class="batch-grid"></div>
           <div class="batch-row-actions">
@@ -317,6 +351,13 @@
                   <button class="mode-option" data-mode-type="SALARY" data-mode="BULK" type="button">BULK</button>
                 </div>
               </div>
+              <div class="description-mode-control">
+                <span>Description</span>
+                <div class="mode-switch" role="group" aria-label="Description mode">
+                  <button class="mode-option" data-desc-type="SALARY" data-desc-mode="SINGLE" type="button">SINGLE DESC</button>
+                  <button class="mode-option active" data-desc-type="SALARY" data-desc-mode="MULTI" type="button">MULTI DESC</button>
+                </div>
+              </div>
               <div class="row-count-control">
                 <label for="salaryRows">Rows</label>
                 <input id="salaryRows" class="row-count-input" type="number" min="1" step="1" value="5" inputmode="numeric" />
@@ -335,6 +376,16 @@
                 <option value="">Select provider</option>
               </select>
               <small id="salaryBulkProviderWarning" class="bulk-warning"></small>
+            </label>
+          </div>
+          <div id="salarySingleDescBar" class="single-desc-config is-hidden" data-single-desc-config="SALARY">
+            <div class="single-desc-copy">
+              <span>SINGLE DESCRIPTION</span>
+              <small>This description will be applied to every active transaction row.</small>
+            </div>
+            <label class="single-desc-field">
+              <span>Description</span>
+              <input id="salarySingleDescription" class="batch-input js-single-description" data-desc-type="SALARY" type="text" placeholder="Required" />
             </label>
           </div>
           <div id="salaryGrid" class="batch-grid"></div>
@@ -365,6 +416,13 @@
                   <button class="mode-option" data-mode-type="REWARD" data-mode="BULK" type="button">BULK</button>
                 </div>
               </div>
+              <div class="description-mode-control">
+                <span>Description</span>
+                <div class="mode-switch" role="group" aria-label="Description mode">
+                  <button class="mode-option" data-desc-type="REWARD" data-desc-mode="SINGLE" type="button">SINGLE DESC</button>
+                  <button class="mode-option active" data-desc-type="REWARD" data-desc-mode="MULTI" type="button">MULTI DESC</button>
+                </div>
+              </div>
               <div class="row-count-control">
                 <label for="rewardRows">Rows</label>
                 <input id="rewardRows" class="row-count-input" type="number" min="1" step="1" value="5" inputmode="numeric" />
@@ -383,6 +441,16 @@
                 <option value="">Select provider</option>
               </select>
               <small id="rewardBulkProviderWarning" class="bulk-warning"></small>
+            </label>
+          </div>
+          <div id="rewardSingleDescBar" class="single-desc-config is-hidden" data-single-desc-config="REWARD">
+            <div class="single-desc-copy">
+              <span>SINGLE DESCRIPTION</span>
+              <small>This description will be applied to every active transaction row.</small>
+            </div>
+            <label class="single-desc-field">
+              <span>Description</span>
+              <input id="rewardSingleDescription" class="batch-input js-single-description" data-desc-type="REWARD" type="text" placeholder="Required" />
             </label>
           </div>
           <div id="rewardGrid" class="batch-grid"></div>
