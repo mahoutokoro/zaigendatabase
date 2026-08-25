@@ -355,7 +355,6 @@ td { padding: 18px 16px; border-bottom: 1px solid rgba(141,100,30,.11); font-siz
   color: white;
   box-shadow: 0 15px 34px rgba(8,19,26,.11);
 }
-.bulk-config[data-bulk-config="LAST_SALDO"] { grid-template-columns: 1fr; }
 .bulk-config-copy { display: grid; gap: 4px; }
 .bulk-config-copy > span {
   font-size: 8px;
@@ -434,6 +433,12 @@ td { padding: 18px 16px; border-bottom: 1px solid rgba(141,100,30,.11); font-siz
 .batch-field label { font-size: 8px; text-transform: uppercase; letter-spacing: .1em; color: var(--muted); }
 .batch-input, .batch-select { width: 100%; min-width: 0; height: 42px; border: 1px solid rgba(141,100,30,.18); border-radius: 10px; background: white; padding: 8px 10px; outline: 0; color: var(--ink); }
 .batch-input[readonly] { background: #f0eadf; color: var(--muted); }
+
+/* Smart spreadsheet-style paste: account fields accept multi-line clipboard data. */
+.js-sender-account,
+.js-recipient-account {
+  caret-color: var(--gold-deep);
+}
 .currency-input { display: grid; grid-template-columns: auto 1fr; align-items: center; min-height: 42px; border: 1px solid rgba(141,100,30,.18); background: white; border-radius: 10px; padding-left: 10px; }
 .currency-input span { color: var(--gold-deep); font-family: "Noto Serif JP", serif; }
 .currency-input input { border: 0; outline: 0; background: transparent; min-width: 0; width: 100%; padding: 8px; }

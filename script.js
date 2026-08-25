@@ -25,7 +25,6 @@ const state = {
   reportRows: [],
   syncingSharedData: false,
   batchModes: {
-    LAST_SALDO: 'STANDARD',
     TRANSFER: 'STANDARD',
     SALARY: 'STANDARD',
     REWARD: 'STANDARD'
@@ -44,7 +43,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   initializeRowControls();
   setDefaultMonth();
   renderAllBatchGrids();
-  ['LAST_SALDO','TRANSFER','SALARY','REWARD'].forEach(applyBatchModeVisuals);
+  ['TRANSFER','SALARY','REWARD'].forEach(applyBatchModeVisuals);
 
   try {
     await Promise.all([loadMasterData(), loadStaffDirectory()]);
@@ -739,6 +738,8 @@ function resetBatchRows(type, count) {
 }
 
 function setBatchMode(type, mode) {
+  if (type === 'LAST_SALDO') return;
+
   mode = mode === 'BULK' ? 'BULK' : 'STANDARD';
   const previous = state.batchModes[type] || 'STANDARD';
 
@@ -765,6 +766,7 @@ function applyBatchModeVisuals(type) {
 }
 
 function isBulkMode(type) {
+  if (type === 'LAST_SALDO') return false;
   return state.batchModes[type] === 'BULK';
 }
 
@@ -930,9 +932,81 @@ function bindBatchRowEvents(row, type) {
   $$('.js-sender-account, .js-recipient-account', row).forEach(input => {
     input.addEventListener('input', () => resolveBatchAccount(row, input, type));
     input.addEventListener('blur', () => resolveBatchAccount(row, input, type));
+    input.addEventListener('paste', event => handleMultiRowAccountPaste(event, row, input, type));
   });
   const provider = $('.js-provider-account', row);
   if (provider) provider.addEventListener('change', () => validateWholeBatchRow(row, type));
+}
+
+/**
+ * Spreadsheet-style multi-row paste for account-number fields.
+ *
+ * Example clipboard:
+ *   ACC001
+ *   ACC002
+ *   ACC003
+ *
+ * Pasting it into Recipient Account row 02 fills rows 02, 03, and 04.
+ * If the grid is too short, the missing rows are created automatically.
+ * Existing values in all other fields are preserved.
+ */
+function handleMultiRowAccountPaste(event, sourceRow, sourceInput, type) {
+  const clipboardText = event.clipboardData?.getData('text') || '';
+  const accounts = parsePastedAccountValues(clipboardText);
+
+  // Keep normal browser paste behavior for a single value.
+  if (accounts.length <= 1) return;
+
+  event.preventDefault();
+
+  const config = batchConfig(type);
+  const container = document.getElementById(config.gridId);
+  if (!container) return;
+
+  let rows = $$('.batch-row', container);
+  const startIndex = rows.indexOf(sourceRow);
+  if (startIndex < 0) return;
+
+  const targetClass = sourceInput.classList.contains('js-sender-account')
+    ? '.js-sender-account'
+    : '.js-recipient-account';
+
+  const requiredRowCount = startIndex + accounts.length;
+  ensureBatchRowCount(type, requiredRowCount);
+
+  // Re-read after auto-expanding the grid.
+  rows = $$('.batch-row', container);
+
+  let lastInput = null;
+
+  accounts.forEach((account, offset) => {
+    const row = rows[startIndex + offset];
+    if (!row) return;
+
+    const input = $(targetClass, row);
+    if (!input) return;
+
+    input.value = account;
+    resolveBatchAccount(row, input, type);
+    lastInput = input;
+  });
+
+  renumberBatchRows(type);
+
+  const rowCountInput = document.getElementById(rowInputIdForType(type));
+  if (rowCountInput) rowCountInput.value = String(rows.length);
+
+  if (lastInput) lastInput.focus();
+
+  toast(`${accounts.length} account numbers pasted into consecutive rows.`, 'success');
+}
+
+function parsePastedAccountValues(text) {
+  return String(text || '')
+    .replace(/\r/g, '')
+    .split(/[\n\t]+/)
+    .map(value => value.trim())
+    .filter(Boolean);
 }
 
 function resolveBatchAccount(row, input, type) {

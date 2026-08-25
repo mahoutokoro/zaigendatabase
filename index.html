@@ -231,24 +231,10 @@
               <p>Single-sided balance migration. No sender account is required.</p>
             </div>
             <div class="panel-controls">
-              <div class="mode-control">
-                <span>Mode</span>
-                <div class="mode-switch" role="group" aria-label="Transaction mode">
-                  <button class="mode-option active" data-mode-type="LAST_SALDO" data-mode="STANDARD" type="button">STANDARD</button>
-                  <button class="mode-option" data-mode-type="LAST_SALDO" data-mode="BULK" type="button">BULK</button>
-                </div>
-              </div>
               <div class="row-count-control">
                 <label for="lastBalanceRows">Rows</label>
                 <input id="lastBalanceRows" class="row-count-input" type="number" min="1" step="1" value="5" inputmode="numeric" />
               </div>
-            </div>
-          </div>
-          <div id="lastBalanceBulkBar" class="bulk-config is-hidden" data-bulk-config="LAST_SALDO">
-            <div class="bulk-config-copy">
-              <span>BULK MODE</span>
-              <strong>Multiple recipient entries</strong>
-              <small>Last Saldo has no sender/provider, so Bulk Mode simply keeps a recipient-focused batch ready for as many rows as needed.</small>
             </div>
           </div>
           <div id="lastBalanceGrid" class="batch-grid"></div>
@@ -269,7 +255,7 @@
           <div class="panel-description">
             <div>
               <h3>Personal Transfer</h3>
-              <p>Creates a debit on the sender and a matching credit on the recipient.</p>
+              <p>For personal transfers, personal challenge rewards, or personal assistant salary payments.</p>
             </div>
             <div class="panel-controls">
               <div class="mode-control">
@@ -321,7 +307,7 @@
           <div class="panel-description">
             <div>
               <h3>Shop & Office Salary / Royalty</h3>
-              <p>Provider accounts are limited to OFFICE/SHOP accounts only.</p>
+              <p>For salary and royalty payments by institutions, offices, or shops. Provider accounts are limited to OFFICE/SHOP accounts only.</p>
             </div>
             <div class="panel-controls">
               <div class="mode-control">
@@ -369,7 +355,7 @@
           <div class="panel-description">
             <div>
               <h3>Reward</h3>
-              <p>Provider accounts are limited to STAFF or OFFICE/SHOP accounts only.</p>
+              <p>For school events, dormitory events, specific achievements, or class rewards only. Provider accounts are limited to STAFF or OFFICE/SHOP accounts.</p>
             </div>
             <div class="panel-controls">
               <div class="mode-control">
