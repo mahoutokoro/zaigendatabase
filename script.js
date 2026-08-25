@@ -23,7 +23,13 @@ const state = {
   currentAccount: null,
   currentTransactions: [],
   reportRows: [],
-  syncingSharedData: false
+  syncingSharedData: false,
+  batchModes: {
+    LAST_SALDO: 'STANDARD',
+    TRANSFER: 'STANDARD',
+    SALARY: 'STANDARD',
+    REWARD: 'STANDARD'
+  }
 };
 
 const $ = (selector, root = document) => root.querySelector(selector);
@@ -35,14 +41,16 @@ document.addEventListener('DOMContentLoaded', async () => {
   cacheElements();
   setBrandAssets();
   bindGlobalEvents();
-  populateRowCountSelects();
+  initializeRowControls();
   setDefaultMonth();
   renderAllBatchGrids();
+  ['LAST_SALDO','TRANSFER','SALARY','REWARD'].forEach(applyBatchModeVisuals);
 
   try {
     await Promise.all([loadMasterData(), loadStaffDirectory()]);
     populateStaffSelectors();
-    renderAllBatchGrids();
+    refreshProviderSelectOptions();
+    refreshBulkProviderOptions();
   } catch (error) {
     console.error(error);
     toast('Public spreadsheet data could not be loaded. Check sharing permissions.', 'error');
@@ -108,8 +116,27 @@ function bindGlobalEvents() {
     switchTellerPanel(button.dataset.panel, button);
   });
 
-  $$('.row-count-select').forEach(select => {
-    select.addEventListener('change', () => renderBatchGridFromSelect(select.id));
+  $$('.row-count-input').forEach(input => {
+    input.addEventListener('change', () => updateBatchRowCountFromInput(input.id));
+    input.addEventListener('blur', () => updateBatchRowCountFromInput(input.id));
+  });
+
+  $$('[data-add-row]').forEach(button => {
+    button.addEventListener('click', () => addBatchRow(button.dataset.addRow));
+  });
+
+  $$('[data-mode-type][data-mode]').forEach(button => {
+    button.addEventListener('click', () => setBatchMode(button.dataset.modeType, button.dataset.mode));
+  });
+
+  const bulkSender = $('.js-bulk-sender-account');
+  if (bulkSender) {
+    bulkSender.addEventListener('input', () => resolveBulkSender());
+    bulkSender.addEventListener('blur', () => resolveBulkSender());
+  }
+
+  $$('.js-bulk-provider-account').forEach(select => {
+    select.addEventListener('change', () => validateBulkProvider(select.dataset.bulkProviderType));
   });
 
   $$('[data-process]').forEach(button => {
@@ -133,16 +160,10 @@ function bindGlobalEvents() {
   });
 }
 
-function populateRowCountSelects() {
-  $$('.row-count-select').forEach(select => {
-    select.innerHTML = '';
-    for (let i = CONFIG.ROW_STEP; i <= CONFIG.MAX_ROWS; i += CONFIG.ROW_STEP) {
-      const option = document.createElement('option');
-      option.value = String(i);
-      option.textContent = String(i);
-      if (i === CONFIG.DEFAULT_ROWS) option.selected = true;
-      select.appendChild(option);
-    }
+function initializeRowControls() {
+  $$('.row-count-input').forEach(input => {
+    const current = Number.parseInt(input.value, 10);
+    input.value = String(Number.isInteger(current) && current > 0 ? current : CONFIG.DEFAULT_ROWS);
   });
 }
 
@@ -221,6 +242,7 @@ async function refreshSharedData() {
     await Promise.all([loadMasterData(), loadStaffDirectory()]);
     populateStaffSelectors();
     refreshProviderSelectOptions();
+    refreshBulkProviderOptions();
   } catch (error) {
     console.warn('ZAIGEN global sync failed:', error);
   } finally {
@@ -260,6 +282,20 @@ function refreshProviderSelectOptions() {
     if (providers.some(item => item.account === current)) {
       select.value = current;
     }
+  });
+}
+
+function refreshBulkProviderOptions() {
+  $$('.js-bulk-provider-account').forEach(select => {
+    const type = select.dataset.bulkProviderType;
+    const current = select.value;
+    const providers = type === 'SALARY' ? state.providersOffice : state.providersReward;
+
+    select.innerHTML = '<option value="">Select provider</option>' + providers
+      .map(item => `<option value="${escapeAttr(item.account)}">${escapeHtml(item.account)} — ${escapeHtml(item.name)}</option>`)
+      .join('');
+
+    if (providers.some(item => item.account === current)) select.value = current;
   });
 }
 
@@ -571,46 +607,262 @@ function switchTellerPanel(panelId, button) {
 }
 
 function renderAllBatchGrids() {
-  renderBatchGrid('LAST_SALDO', Number($('#lastBalanceRows')?.value || CONFIG.DEFAULT_ROWS));
-  renderBatchGrid('TRANSFER', Number($('#transferRows')?.value || CONFIG.DEFAULT_ROWS));
-  renderBatchGrid('SALARY', Number($('#salaryRows')?.value || CONFIG.DEFAULT_ROWS));
-  renderBatchGrid('REWARD', Number($('#rewardRows')?.value || CONFIG.DEFAULT_ROWS));
+  ensureBatchRowCount('LAST_SALDO', requestedRowCount('LAST_SALDO'));
+  ensureBatchRowCount('TRANSFER', requestedRowCount('TRANSFER'));
+  ensureBatchRowCount('SALARY', requestedRowCount('SALARY'));
+  ensureBatchRowCount('REWARD', requestedRowCount('REWARD'));
 }
 
-function renderBatchGridFromSelect(selectId) {
-  const map = {
+function rowInputIdForType(type) {
+  return {
+    LAST_SALDO: 'lastBalanceRows',
+    TRANSFER: 'transferRows',
+    SALARY: 'salaryRows',
+    REWARD: 'rewardRows'
+  }[type];
+}
+
+function typeFromRowInputId(inputId) {
+  return {
     lastBalanceRows: 'LAST_SALDO',
     transferRows: 'TRANSFER',
     salaryRows: 'SALARY',
     rewardRows: 'REWARD'
-  };
-  const select = document.getElementById(selectId);
-  renderBatchGrid(map[selectId], Number(select.value));
+  }[inputId];
 }
 
-function renderBatchGrid(type, count) {
+function requestedRowCount(type) {
+  const input = document.getElementById(rowInputIdForType(type));
+  const value = Number.parseInt(input?.value, 10);
+  return Number.isInteger(value) && value > 0 ? value : CONFIG.DEFAULT_ROWS;
+}
+
+function updateBatchRowCountFromInput(inputId) {
+  const type = typeFromRowInputId(inputId);
+  if (!type) return;
+
+  const input = document.getElementById(inputId);
+  let target = Number.parseInt(input.value, 10);
+  if (!Number.isInteger(target) || target < 1) target = 1;
+  input.value = String(target);
+
+  const actual = ensureBatchRowCount(type, target);
+  input.value = String(actual);
+}
+
+function ensureBatchRowCount(type, targetCount) {
+  const config = batchConfig(type);
+  const container = document.getElementById(config.gridId);
+  if (!container) return 0;
+
+  targetCount = Math.max(1, Number.parseInt(targetCount, 10) || CONFIG.DEFAULT_ROWS);
+  let rows = $$('.batch-row', container);
+
+  if (rows.length < targetCount) {
+    for (let i = rows.length; i < targetCount; i++) {
+      appendBatchRow(type);
+    }
+  } else if (rows.length > targetCount) {
+    // Remove only blank rows. Filled rows are never destroyed by a row-count change.
+    for (let i = rows.length - 1; i >= 0 && rows.length > targetCount; i--) {
+      if (isBatchRowPristine(type, rows[i])) {
+        rows[i].remove();
+        rows.splice(i, 1);
+      }
+    }
+  }
+
+  renumberBatchRows(type);
+  const actual = $$('.batch-row', container).length;
+  const input = document.getElementById(rowInputIdForType(type));
+  if (input) input.value = String(actual);
+  return actual;
+}
+
+function appendBatchRow(type) {
+  const config = batchConfig(type);
+  const container = document.getElementById(config.gridId);
+  if (!container) return null;
+
+  const number = $$('.batch-row', container).length + 1;
+  const row = document.createElement('div');
+  row.className = `batch-row ${config.className}`;
+  row.dataset.type = type;
+  row.dataset.index = String(number - 1);
+  row.innerHTML = buildBatchRowHtml(type, number);
+  container.appendChild(row);
+  bindBatchRowEvents(row, type);
+  applyBatchModeVisuals(type);
+  return row;
+}
+
+function addBatchRow(type) {
+  appendBatchRow(type);
+  const config = batchConfig(type);
+  const count = $$('.batch-row', document.getElementById(config.gridId)).length;
+  const input = document.getElementById(rowInputIdForType(type));
+  if (input) input.value = String(count);
+  renumberBatchRows(type);
+}
+
+function renumberBatchRows(type) {
+  const config = batchConfig(type);
+  const container = document.getElementById(config.gridId);
+  if (!container) return;
+  $$('.batch-row', container).forEach((row, index) => {
+    row.dataset.index = String(index);
+    const badge = $('.batch-index', row);
+    if (badge) badge.textContent = String(index + 1).padStart(2, '0');
+  });
+}
+
+function isBatchRowPristine(type, row) {
+  const amountRaw = $('.js-amount', row)?.dataset.rawValue || $('.js-amount', row)?.value.replace(/,/g, '') || '';
+  const description = $('.js-description', row)?.value.trim() || '';
+  const recipient = $('.js-recipient-account', row)?.value.trim() || '';
+  const sender = $('.js-sender-account', row)?.value.trim() || '';
+  const provider = $('.js-provider-account', row)?.value.trim() || '';
+  const defaultDescription = type === 'LAST_SALDO' && description === 'Saldo akhir';
+
+  return !recipient && !sender && !provider && !amountRaw && (!description || defaultDescription);
+}
+
+function resetBatchRows(type, count) {
   const config = batchConfig(type);
   const container = document.getElementById(config.gridId);
   if (!container) return;
   container.innerHTML = '';
+  const target = Math.max(1, Number.parseInt(count, 10) || CONFIG.DEFAULT_ROWS);
+  for (let i = 0; i < target; i++) appendBatchRow(type);
+  const input = document.getElementById(rowInputIdForType(type));
+  if (input) input.value = String(target);
+}
 
-  for (let i = 0; i < count; i++) {
-    const row = document.createElement('div');
-    row.className = `batch-row ${config.className}`;
-    row.dataset.type = type;
-    row.dataset.index = String(i);
-    row.innerHTML = buildBatchRowHtml(type, i + 1);
-    container.appendChild(row);
-    bindBatchRowEvents(row, type);
+function setBatchMode(type, mode) {
+  mode = mode === 'BULK' ? 'BULK' : 'STANDARD';
+  const previous = state.batchModes[type] || 'STANDARD';
+
+  if (mode === 'BULK' && previous !== 'BULK') seedBulkSourceFromRows(type);
+  if (mode === 'STANDARD' && previous === 'BULK') applyBulkSourceToEmptyRows(type);
+
+  state.batchModes[type] = mode;
+  applyBatchModeVisuals(type);
+}
+
+function applyBatchModeVisuals(type) {
+  const config = batchConfig(type);
+  const panel = document.getElementById(config.panelId);
+  if (!panel) return;
+  const mode = state.batchModes[type] || 'STANDARD';
+  panel.classList.toggle('bulk-mode', mode === 'BULK');
+
+  $$(`[data-mode-type="${type}"]`).forEach(button => {
+    button.classList.toggle('active', button.dataset.mode === mode);
+  });
+
+  const bulkBar = $(`[data-bulk-config="${type}"]`);
+  if (bulkBar) bulkBar.classList.toggle('is-hidden', mode !== 'BULK');
+}
+
+function isBulkMode(type) {
+  return state.batchModes[type] === 'BULK';
+}
+
+function seedBulkSourceFromRows(type) {
+  const config = batchConfig(type);
+  const container = document.getElementById(config.gridId);
+  if (!container) return;
+
+  if (type === 'TRANSFER') {
+    const source = $$('.js-sender-account', container).find(input => input.value.trim());
+    if (source && !$('#transferBulkSender').value.trim()) {
+      $('#transferBulkSender').value = source.value.trim();
+      resolveBulkSender();
+    }
+    return;
   }
+
+  if (type === 'SALARY' || type === 'REWARD') {
+    const source = $$('.js-provider-account', container).find(select => select.value);
+    const bulkSelect = document.getElementById(type === 'SALARY' ? 'salaryBulkProvider' : 'rewardBulkProvider');
+    if (source && bulkSelect && !bulkSelect.value) bulkSelect.value = source.value;
+    validateBulkProvider(type);
+  }
+}
+
+function applyBulkSourceToEmptyRows(type) {
+  const config = batchConfig(type);
+  const container = document.getElementById(config.gridId);
+  if (!container) return;
+
+  if (type === 'TRANSFER') {
+    const shared = $('#transferBulkSender')?.value.trim() || '';
+    if (!shared) return;
+    $$('.batch-row', container).forEach(row => {
+      const input = $('.js-sender-account', row);
+      if (input && !input.value.trim()) {
+        input.value = shared;
+        resolveBatchAccount(row, input, type);
+      }
+    });
+    return;
+  }
+
+  if (type === 'SALARY' || type === 'REWARD') {
+    const bulkSelect = document.getElementById(type === 'SALARY' ? 'salaryBulkProvider' : 'rewardBulkProvider');
+    const shared = bulkSelect?.value || '';
+    if (!shared) return;
+    $$('.batch-row', container).forEach(row => {
+      const select = $('.js-provider-account', row);
+      if (select && !select.value) select.value = shared;
+      validateWholeBatchRow(row, type);
+    });
+  }
+}
+
+function resolveBulkSender() {
+  const input = $('#transferBulkSender');
+  const nameInput = $('#transferBulkSenderName');
+  const warning = $('#transferBulkSenderWarning');
+  if (!input || !nameInput || !warning) return;
+
+  const account = normalizeAccount(input.value);
+  warning.textContent = '';
+  nameInput.value = '';
+  if (!account) return;
+
+  const record = state.masterMap.get(account);
+  if (!record) {
+    warning.textContent = 'Account not found';
+    return;
+  }
+
+  nameInput.value = record.name || '';
+  if (isFrozenStatus(record.status)) warning.textContent = 'FROZEN — transactions are prohibited';
+}
+
+function validateBulkProvider(type) {
+  if (type !== 'SALARY' && type !== 'REWARD') return;
+  const select = document.getElementById(type === 'SALARY' ? 'salaryBulkProvider' : 'rewardBulkProvider');
+  const warning = document.getElementById(type === 'SALARY' ? 'salaryBulkProviderWarning' : 'rewardBulkProviderWarning');
+  if (!select || !warning) return;
+  warning.textContent = '';
+  if (!select.value) return;
+
+  const record = state.masterMap.get(normalizeAccount(select.value));
+  if (!record) {
+    warning.textContent = 'Provider account not found';
+    return;
+  }
+  if (isFrozenStatus(record.status)) warning.textContent = 'FROZEN — transactions are prohibited';
 }
 
 function batchConfig(type) {
   return {
-    LAST_SALDO: { gridId: 'lastBalanceGrid', staffId: 'lastBalanceStaff', className: 'last-saldo' },
-    TRANSFER: { gridId: 'transferGrid', staffId: 'transferStaff', className: 'transfer' },
-    SALARY: { gridId: 'salaryGrid', staffId: 'salaryStaff', className: 'provider' },
-    REWARD: { gridId: 'rewardGrid', staffId: 'rewardStaff', className: 'provider' }
+    LAST_SALDO: { panelId: 'lastBalancePanel', gridId: 'lastBalanceGrid', staffId: 'lastBalanceStaff', className: 'last-saldo' },
+    TRANSFER: { panelId: 'transferPanel', gridId: 'transferGrid', staffId: 'transferStaff', className: 'transfer' },
+    SALARY: { panelId: 'salaryPanel', gridId: 'salaryGrid', staffId: 'salaryStaff', className: 'provider' },
+    REWARD: { panelId: 'rewardPanel', gridId: 'rewardGrid', staffId: 'rewardStaff', className: 'provider' }
   }[type];
 }
 
@@ -636,8 +888,8 @@ function buildBatchRowHtml(type, number) {
     return [
       index,
       date,
-      accountFieldHtml('Sender account', 'js-sender-account'),
-      readonlyNameFieldHtml('Sender name', 'js-sender-name'),
+      accountFieldHtml('Sender account', 'js-sender-account', 'bulk-source-field'),
+      readonlyNameFieldHtml('Sender name', 'js-sender-name', 'bulk-source-field'),
       accountFieldHtml('Recipient account', 'js-recipient-account'),
       readonlyNameFieldHtml('Recipient name', 'js-recipient-name'),
       amount,
@@ -653,7 +905,7 @@ function buildBatchRowHtml(type, number) {
   return [
     index,
     date,
-    fieldHtml('Provider', `<select class="batch-select js-provider-account">${providerOptions}</select>`),
+    fieldHtml('Provider', `<select class="batch-select js-provider-account">${providerOptions}</select>`, 'bulk-source-field'),
     accountFieldHtml('Recipient account', 'js-recipient-account'),
     readonlyNameFieldHtml('Recipient name', 'js-recipient-name'),
     amount,
@@ -661,16 +913,16 @@ function buildBatchRowHtml(type, number) {
   ].join('');
 }
 
-function fieldHtml(label, control) {
-  return `<div class="batch-field"><label>${label}</label>${control}<div class="account-warning"></div></div>`;
+function fieldHtml(label, control, extraClass = '') {
+  return `<div class="batch-field ${extraClass}"><label>${label}</label>${control}<div class="account-warning"></div></div>`;
 }
 
-function accountFieldHtml(label, className) {
-  return fieldHtml(label, `<input class="batch-input ${className}" type="text" autocomplete="off" placeholder="Account no.">`);
+function accountFieldHtml(label, className, extraClass = '') {
+  return fieldHtml(label, `<input class="batch-input ${className}" type="text" autocomplete="off" placeholder="Account no.">`, extraClass);
 }
 
-function readonlyNameFieldHtml(label, className) {
-  return fieldHtml(label, `<input class="batch-input ${className}" type="text" value="" readonly placeholder="Auto-filled">`);
+function readonlyNameFieldHtml(label, className, extraClass = '') {
+  return fieldHtml(label, `<input class="batch-input ${className}" type="text" value="" readonly placeholder="Auto-filled">`, extraClass);
 }
 
 function bindBatchRowEvents(row, type) {
@@ -715,9 +967,16 @@ function resolveBatchAccount(row, input, type) {
 
 function validateWholeBatchRow(row, type) {
   const accounts = [];
-  if (type === 'TRANSFER') accounts.push($('.js-sender-account', row)?.value, $('.js-recipient-account', row)?.value);
+  if (type === 'TRANSFER') {
+    const sender = isBulkMode(type) ? $('#transferBulkSender')?.value : $('.js-sender-account', row)?.value;
+    accounts.push(sender, $('.js-recipient-account', row)?.value);
+  }
   if (type === 'LAST_SALDO') accounts.push($('.js-recipient-account', row)?.value);
-  if (type === 'SALARY' || type === 'REWARD') accounts.push($('.js-provider-account', row)?.value, $('.js-recipient-account', row)?.value);
+  if (type === 'SALARY' || type === 'REWARD') {
+    const bulkSelect = document.getElementById(type === 'SALARY' ? 'salaryBulkProvider' : 'rewardBulkProvider');
+    const provider = isBulkMode(type) ? bulkSelect?.value : $('.js-provider-account', row)?.value;
+    accounts.push(provider, $('.js-recipient-account', row)?.value);
+  }
   const frozen = accounts.filter(Boolean).some(account => {
     const record = state.masterMap.get(normalizeAccount(account));
     return record && isFrozenStatus(record.status);
@@ -792,7 +1051,7 @@ async function processBatch(type, button) {
     if (!result.success) throw new Error(result.message || 'Transaction batch failed');
     toast(`${result.processed || entries.length} input${entries.length > 1 ? 's' : ''} processed successfully.`, 'success');
     await refreshSharedData();
-    renderBatchGrid(type, rows.length);
+    resetBatchRows(type, rows.length);
     if (state.currentAccount) await searchAccount(state.currentAccount, true);
     if ($('#reportsPanel').classList.contains('active')) await loadMonthlyReport();
   } catch (error) {
@@ -808,18 +1067,22 @@ function extractBatchRow(type, row) {
   const amountRaw = $('.js-amount', row)?.dataset.rawValue || $('.js-amount', row)?.value.replace(/,/g, '') || '';
   const amount = Number(amountRaw);
   const description = $('.js-description', row)?.value.trim() || '';
+  const bulk = isBulkMode(type);
 
-  const values = [...$$('input:not([readonly]), select', row)].map(el => String(el.value || '').trim());
-  const hasAny = values.some(Boolean);
-  const accountsOnly = type === 'LAST_SALDO'
-    ? $('.js-recipient-account', row)?.value.trim()
-    : type === 'TRANSFER'
-      ? `${$('.js-sender-account', row)?.value.trim() || ''}${$('.js-recipient-account', row)?.value.trim() || ''}`
-      : `${$('.js-provider-account', row)?.value.trim() || ''}${$('.js-recipient-account', row)?.value.trim() || ''}`;
+  const recipientValue = $('.js-recipient-account', row)?.value.trim() || '';
+  const rowSenderValue = $('.js-sender-account', row)?.value.trim() || '';
+  const rowProviderValue = $('.js-provider-account', row)?.value.trim() || '';
 
-  // A pristine row contains a default date, so date alone must not count as "filled".
-  const meaningful = Boolean(accountsOnly || amountRaw || description && !(type === 'LAST_SALDO' && description === 'Saldo akhir'));
-  if (!meaningful && hasAny) return null;
+  const sourceValue = type === 'TRANSFER'
+    ? (bulk ? ($('#transferBulkSender')?.value.trim() || '') : rowSenderValue)
+    : (type === 'SALARY' || type === 'REWARD')
+      ? (bulk
+          ? (document.getElementById(type === 'SALARY' ? 'salaryBulkProvider' : 'rewardBulkProvider')?.value || '')
+          : rowProviderValue)
+      : '';
+
+  // Default date and Last Saldo's default description do not make an unused row active.
+  const meaningful = Boolean(recipientValue || amountRaw || (description && !(type === 'LAST_SALDO' && description === 'Saldo akhir')) || (!bulk && sourceValue));
   if (!meaningful) return null;
 
   if (!date) throw new Error('Every used row must have a date.');
@@ -827,20 +1090,19 @@ function extractBatchRow(type, row) {
   if (!description) throw new Error('Description is mandatory for every transaction.');
 
   if (type === 'LAST_SALDO') {
-    const recipient = requireValidAccount($('.js-recipient-account', row)?.value, 'recipient');
+    const recipient = requireValidAccount(recipientValue, 'recipient');
     return { date, recipient: recipient.account, amount, description };
   }
 
   if (type === 'TRANSFER') {
-    const sender = requireValidAccount($('.js-sender-account', row)?.value, 'sender');
-    const recipient = requireValidAccount($('.js-recipient-account', row)?.value, 'recipient');
+    const sender = requireValidAccount(sourceValue, bulk ? 'bulk sender' : 'sender');
+    const recipient = requireValidAccount(recipientValue, 'recipient');
     if (sender.account === recipient.account) throw new Error(`Sender and recipient cannot be the same account (${sender.account}).`);
     return { date, sender: sender.account, recipient: recipient.account, amount, description };
   }
 
-  const providerValue = $('.js-provider-account', row)?.value;
-  const provider = requireValidAccount(providerValue, 'provider');
-  const recipient = requireValidAccount($('.js-recipient-account', row)?.value, 'recipient');
+  const provider = requireValidAccount(sourceValue, bulk ? 'bulk provider' : 'provider');
+  const recipient = requireValidAccount(recipientValue, 'recipient');
   if (provider.account === recipient.account) throw new Error(`Provider and recipient cannot be the same account (${provider.account}).`);
 
   if (type === 'SALARY' && !normalizeStatus(provider.status).includes('OFFICE/SHOP')) {

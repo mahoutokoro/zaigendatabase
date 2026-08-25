@@ -230,12 +230,32 @@
               <h3>Last Saldo Input</h3>
               <p>Single-sided balance migration. No sender account is required.</p>
             </div>
-            <div class="row-count-control">
-              <label for="lastBalanceRows">Rows</label>
-              <select id="lastBalanceRows" class="row-count-select"></select>
+            <div class="panel-controls">
+              <div class="mode-control">
+                <span>Mode</span>
+                <div class="mode-switch" role="group" aria-label="Transaction mode">
+                  <button class="mode-option active" data-mode-type="LAST_SALDO" data-mode="STANDARD" type="button">STANDARD</button>
+                  <button class="mode-option" data-mode-type="LAST_SALDO" data-mode="BULK" type="button">BULK</button>
+                </div>
+              </div>
+              <div class="row-count-control">
+                <label for="lastBalanceRows">Rows</label>
+                <input id="lastBalanceRows" class="row-count-input" type="number" min="1" step="1" value="5" inputmode="numeric" />
+              </div>
+            </div>
+          </div>
+          <div id="lastBalanceBulkBar" class="bulk-config is-hidden" data-bulk-config="LAST_SALDO">
+            <div class="bulk-config-copy">
+              <span>BULK MODE</span>
+              <strong>Multiple recipient entries</strong>
+              <small>Last Saldo has no sender/provider, so Bulk Mode simply keeps a recipient-focused batch ready for as many rows as needed.</small>
             </div>
           </div>
           <div id="lastBalanceGrid" class="batch-grid"></div>
+          <div class="batch-row-actions">
+            <button class="add-row-button" data-add-row="LAST_SALDO" type="button"><span>+</span> ADD ROW</button>
+            <small>Adding or changing rows keeps every field you have already filled.</small>
+          </div>
           <div class="process-bar">
             <label class="staff-selector">
               <span>Input Staff</span>
@@ -251,12 +271,43 @@
               <h3>Personal Transfer</h3>
               <p>Creates a debit on the sender and a matching credit on the recipient.</p>
             </div>
-            <div class="row-count-control">
-              <label for="transferRows">Rows</label>
-              <select id="transferRows" class="row-count-select"></select>
+            <div class="panel-controls">
+              <div class="mode-control">
+                <span>Mode</span>
+                <div class="mode-switch" role="group" aria-label="Transaction mode">
+                  <button class="mode-option active" data-mode-type="TRANSFER" data-mode="STANDARD" type="button">STANDARD</button>
+                  <button class="mode-option" data-mode-type="TRANSFER" data-mode="BULK" type="button">BULK</button>
+                </div>
+              </div>
+              <div class="row-count-control">
+                <label for="transferRows">Rows</label>
+                <input id="transferRows" class="row-count-input" type="number" min="1" step="1" value="5" inputmode="numeric" />
+              </div>
+            </div>
+          </div>
+          <div id="transferBulkBar" class="bulk-config is-hidden" data-bulk-config="TRANSFER">
+            <div class="bulk-config-copy">
+              <span>BULK MODE</span>
+              <strong>One sender, multiple recipients</strong>
+              <small>Set the sender once here. Each row only needs its recipient, amount, date, and description.</small>
+            </div>
+            <div class="bulk-source-fields">
+              <label class="bulk-field">
+                <span>Sender Account</span>
+                <input id="transferBulkSender" class="batch-input js-bulk-sender-account" type="text" autocomplete="off" placeholder="Account no." />
+                <small id="transferBulkSenderWarning" class="bulk-warning"></small>
+              </label>
+              <label class="bulk-field">
+                <span>Sender Name</span>
+                <input id="transferBulkSenderName" class="batch-input" type="text" readonly placeholder="Auto-filled" />
+              </label>
             </div>
           </div>
           <div id="transferGrid" class="batch-grid"></div>
+          <div class="batch-row-actions">
+            <button class="add-row-button" data-add-row="TRANSFER" type="button"><span>+</span> ADD ROW</button>
+            <small>Adding or changing rows keeps every field you have already filled.</small>
+          </div>
           <div class="process-bar">
             <label class="staff-selector">
               <span>Input Staff</span>
@@ -272,12 +323,39 @@
               <h3>Shop & Office Salary / Royalty</h3>
               <p>Provider accounts are limited to OFFICE/SHOP accounts only.</p>
             </div>
-            <div class="row-count-control">
-              <label for="salaryRows">Rows</label>
-              <select id="salaryRows" class="row-count-select"></select>
+            <div class="panel-controls">
+              <div class="mode-control">
+                <span>Mode</span>
+                <div class="mode-switch" role="group" aria-label="Transaction mode">
+                  <button class="mode-option active" data-mode-type="SALARY" data-mode="STANDARD" type="button">STANDARD</button>
+                  <button class="mode-option" data-mode-type="SALARY" data-mode="BULK" type="button">BULK</button>
+                </div>
+              </div>
+              <div class="row-count-control">
+                <label for="salaryRows">Rows</label>
+                <input id="salaryRows" class="row-count-input" type="number" min="1" step="1" value="5" inputmode="numeric" />
+              </div>
             </div>
           </div>
+          <div id="salaryBulkBar" class="bulk-config is-hidden" data-bulk-config="SALARY">
+            <div class="bulk-config-copy">
+              <span>BULK MODE</span>
+              <strong>One provider, multiple recipients</strong>
+              <small>Select the OFFICE/SHOP provider once. Every recipient row will use the same provider.</small>
+            </div>
+            <label class="bulk-field bulk-provider-field">
+              <span>Provider</span>
+              <select id="salaryBulkProvider" class="batch-select js-bulk-provider-account" data-bulk-provider-type="SALARY">
+                <option value="">Select provider</option>
+              </select>
+              <small id="salaryBulkProviderWarning" class="bulk-warning"></small>
+            </label>
+          </div>
           <div id="salaryGrid" class="batch-grid"></div>
+          <div class="batch-row-actions">
+            <button class="add-row-button" data-add-row="SALARY" type="button"><span>+</span> ADD ROW</button>
+            <small>Adding or changing rows keeps every field you have already filled.</small>
+          </div>
           <div class="process-bar">
             <label class="staff-selector">
               <span>Input Staff</span>
@@ -293,12 +371,39 @@
               <h3>Reward</h3>
               <p>Provider accounts are limited to STAFF or OFFICE/SHOP accounts only.</p>
             </div>
-            <div class="row-count-control">
-              <label for="rewardRows">Rows</label>
-              <select id="rewardRows" class="row-count-select"></select>
+            <div class="panel-controls">
+              <div class="mode-control">
+                <span>Mode</span>
+                <div class="mode-switch" role="group" aria-label="Transaction mode">
+                  <button class="mode-option active" data-mode-type="REWARD" data-mode="STANDARD" type="button">STANDARD</button>
+                  <button class="mode-option" data-mode-type="REWARD" data-mode="BULK" type="button">BULK</button>
+                </div>
+              </div>
+              <div class="row-count-control">
+                <label for="rewardRows">Rows</label>
+                <input id="rewardRows" class="row-count-input" type="number" min="1" step="1" value="5" inputmode="numeric" />
+              </div>
             </div>
           </div>
+          <div id="rewardBulkBar" class="bulk-config is-hidden" data-bulk-config="REWARD">
+            <div class="bulk-config-copy">
+              <span>BULK MODE</span>
+              <strong>One provider, multiple recipients</strong>
+              <small>Select the STAFF or OFFICE/SHOP provider once. Every recipient row will use the same provider.</small>
+            </div>
+            <label class="bulk-field bulk-provider-field">
+              <span>Provider</span>
+              <select id="rewardBulkProvider" class="batch-select js-bulk-provider-account" data-bulk-provider-type="REWARD">
+                <option value="">Select provider</option>
+              </select>
+              <small id="rewardBulkProviderWarning" class="bulk-warning"></small>
+            </label>
+          </div>
           <div id="rewardGrid" class="batch-grid"></div>
+          <div class="batch-row-actions">
+            <button class="add-row-button" data-add-row="REWARD" type="button"><span>+</span> ADD ROW</button>
+            <small>Adding or changing rows keeps every field you have already filled.</small>
+          </div>
           <div class="process-bar">
             <label class="staff-selector">
               <span>Input Staff</span>
