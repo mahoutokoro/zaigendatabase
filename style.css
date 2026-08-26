@@ -7144,3 +7144,112 @@ body.home-view-active .teller-entry {
     right: 10px;
   }
 }
+
+/* =========================================================
+   ZAIGEN PREMIUM V11 — DESKTOP TRANSACTION ROW WIDTH FIX
+   Requested 2026-08-26.
+   Teller input rows only. No transaction logic is changed.
+
+   The old desktop templates reserved several fixed-width columns. When a
+   mode hid Amount / Description / SOURCE fields, the remaining fields kept
+   those old widths and left a large empty area on the right. These rules
+   make every VISIBLE field share the complete row width automatically.
+========================================================= */
+@media (min-width: 781px) {
+  /* All ordinary Teller entry rows use the whole available width. Compact
+     recipient mode keeps its dedicated 3-column layout from V7. */
+  #lastBalancePanel:not(.compact-recipient-mode) .batch-row,
+  #transferPanel:not(.compact-recipient-mode) .batch-row,
+  #salaryPanel:not(.compact-recipient-mode) .batch-row,
+  #rewardPanel:not(.compact-recipient-mode) .batch-row,
+  #lastBalancePanel:not(.compact-recipient-mode) .batch-row.last-saldo,
+  #transferPanel:not(.compact-recipient-mode) .batch-row.transfer,
+  #salaryPanel:not(.compact-recipient-mode) .batch-row.provider,
+  #rewardPanel:not(.compact-recipient-mode) .batch-row.provider {
+    width: 100%;
+    max-width: none;
+    min-width: 0;
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    overflow: visible;
+  }
+
+  /* Entry badge / CLEAR remains a compact fixed leading column. */
+  #lastBalancePanel:not(.compact-recipient-mode) .batch-row-leading,
+  #transferPanel:not(.compact-recipient-mode) .batch-row-leading,
+  #salaryPanel:not(.compact-recipient-mode) .batch-row-leading,
+  #rewardPanel:not(.compact-recipient-mode) .batch-row-leading {
+    flex: 0 0 54px;
+    width: 54px;
+    min-width: 54px;
+  }
+
+  /* Every field that is still visible expands into the released space.
+     display:none modes therefore rebalance automatically with no dead zone. */
+  #lastBalancePanel:not(.compact-recipient-mode) .batch-row > .batch-field,
+  #transferPanel:not(.compact-recipient-mode) .batch-row > .batch-field,
+  #salaryPanel:not(.compact-recipient-mode) .batch-row > .batch-field,
+  #rewardPanel:not(.compact-recipient-mode) .batch-row > .batch-field {
+    flex: 1 1 0;
+    width: auto;
+    min-width: 0;
+  }
+
+  /* Small proportional refinements keep the row visually balanced while
+     still consuming 100% of the card width. */
+  #lastBalancePanel:not(.compact-recipient-mode) .batch-row > .date-field,
+  #transferPanel:not(.compact-recipient-mode) .batch-row > .date-field,
+  #salaryPanel:not(.compact-recipient-mode) .batch-row > .date-field,
+  #rewardPanel:not(.compact-recipient-mode) .batch-row > .date-field {
+    flex-grow: .82;
+  }
+
+  #lastBalancePanel:not(.compact-recipient-mode) .batch-row > .recipient-account-field,
+  #transferPanel:not(.compact-recipient-mode) .batch-row > .recipient-account-field,
+  #salaryPanel:not(.compact-recipient-mode) .batch-row > .recipient-account-field,
+  #rewardPanel:not(.compact-recipient-mode) .batch-row > .recipient-account-field,
+  #transferPanel:not(.compact-recipient-mode) .batch-row > .bulk-source-field,
+  #salaryPanel:not(.compact-recipient-mode) .batch-row > .bulk-source-field,
+  #rewardPanel:not(.compact-recipient-mode) .batch-row > .bulk-source-field {
+    flex-grow: 1.16;
+  }
+
+  #lastBalancePanel:not(.compact-recipient-mode) .batch-row > .recipient-name-field,
+  #transferPanel:not(.compact-recipient-mode) .batch-row > .recipient-name-field,
+  #salaryPanel:not(.compact-recipient-mode) .batch-row > .recipient-name-field,
+  #rewardPanel:not(.compact-recipient-mode) .batch-row > .recipient-name-field {
+    flex-grow: 1.08;
+  }
+
+  #lastBalancePanel:not(.compact-recipient-mode) .batch-row > .amount-field,
+  #transferPanel:not(.compact-recipient-mode) .batch-row > .amount-field,
+  #salaryPanel:not(.compact-recipient-mode) .batch-row > .amount-field,
+  #rewardPanel:not(.compact-recipient-mode) .batch-row > .amount-field {
+    flex-grow: .9;
+  }
+
+  #lastBalancePanel:not(.compact-recipient-mode) .batch-row > .description-field,
+  #transferPanel:not(.compact-recipient-mode) .batch-row > .description-field,
+  #salaryPanel:not(.compact-recipient-mode) .batch-row > .description-field,
+  #rewardPanel:not(.compact-recipient-mode) .batch-row > .description-field {
+    flex-grow: 1.28;
+  }
+
+  /* All controls inside the stretched fields must follow the new width. */
+  #lastBalancePanel:not(.compact-recipient-mode) .batch-row .batch-input,
+  #lastBalancePanel:not(.compact-recipient-mode) .batch-row .batch-select,
+  #lastBalancePanel:not(.compact-recipient-mode) .batch-row .currency-input,
+  #transferPanel:not(.compact-recipient-mode) .batch-row .batch-input,
+  #transferPanel:not(.compact-recipient-mode) .batch-row .batch-select,
+  #transferPanel:not(.compact-recipient-mode) .batch-row .currency-input,
+  #salaryPanel:not(.compact-recipient-mode) .batch-row .batch-input,
+  #salaryPanel:not(.compact-recipient-mode) .batch-row .batch-select,
+  #salaryPanel:not(.compact-recipient-mode) .batch-row .currency-input,
+  #rewardPanel:not(.compact-recipient-mode) .batch-row .batch-input,
+  #rewardPanel:not(.compact-recipient-mode) .batch-row .batch-select,
+  #rewardPanel:not(.compact-recipient-mode) .batch-row .currency-input {
+    width: 100%;
+    min-width: 0;
+  }
+}
