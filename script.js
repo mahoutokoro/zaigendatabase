@@ -14,8 +14,15 @@ const CONFIG = {
   TELLER_SESSION_KEY: 'zaigenOfficeTellerSession',
   BATCH_REQUEST_STORAGE_KEY: 'zaigenOfficePendingBatchRequests',
   BATCH_REQUEST_TTL_MS: 6 * 60 * 60 * 1000,
-  POST_TIMEOUT_MS: 25000,
-  POST_RETRY_DELAY_MS: 650
+
+  // Batch writes use command + confirmation instead of trusting POST response.
+  BATCH_STATUS_INTERVAL_MS: 350,
+  BATCH_FIRST_CONFIRM_MS: 5500,
+  BATCH_SECOND_CONFIRM_MS: 6500,
+  BATCH_RECORDED_GRACE_MS: 900,
+
+  // Kept for edit/delete requests that still use readable POST responses.
+  POST_TIMEOUT_MS: 30000
 };
 
 const state = {
@@ -27,6 +34,9 @@ const state = {
   teller: null,
   currentAccount: null,
   currentTransactions: [],
+  currentLedgerMonth: '',
+  ledgerLoadToken: 0,
+  ledgerLoading: false,
   reportRows: [],
   syncingSharedData: false,
   batchModes: {
@@ -79,6 +89,7 @@ function cacheElements() {
     'headerSearchForm','headerSearchInput','heroSearchForm','heroSearchInput','welcomeView','accountView',
     'profilePhoto','profileStatusBadge','profileName','profileKanji','profileAccount','profileX','profileBalance',
     'balanceStatusText','transactionTableBody','transactionCount','transactionEmpty','refreshAccountButton',
+    'ledgerMonth','transactionLoading','transactionScrollWrap','ledgerScrollNav','ledgerScrollTop','ledgerScrollBottom',
     'tellerButton','tellerLoginModal','tellerLoginForm','tellerIdInput','tellerPasswordInput','tellerWorkspace',
     'loggedTellerName','loggedTellerId','tellerLogoutButton','closeWorkspaceButton','tellerNav',
     'loadingOverlay','loadingText','toastRegion','reportMonth','loadReportButton','reportSearchInput','reportSearchButton','exportPdfButton','exportPngButton',
@@ -110,8 +121,27 @@ function bindGlobalEvents() {
   });
 
   els.refreshAccountButton.addEventListener('click', () => {
-    if (state.currentAccount) searchAccount(state.currentAccount, true);
+    if (state.currentAccount) refreshCurrentAccountView();
   });
+
+  els.ledgerMonth.addEventListener('change', () => {
+    if (!state.currentAccount || !els.ledgerMonth.value) return;
+    state.currentLedgerMonth = els.ledgerMonth.value;
+    loadLedgerMonth(state.currentAccount, state.currentLedgerMonth);
+  });
+
+  els.ledgerScrollTop.addEventListener('click', () => {
+    els.transactionScrollWrap.scrollTo({ top: 0, behavior: 'smooth' });
+  });
+
+  els.ledgerScrollBottom.addEventListener('click', () => {
+    els.transactionScrollWrap.scrollTo({
+      top: els.transactionScrollWrap.scrollHeight,
+      behavior: 'smooth'
+    });
+  });
+
+  els.transactionScrollWrap.addEventListener('scroll', updateLedgerScrollNavigation, { passive: true });
 
   $$('[data-home-logo]').forEach(logo => {
     logo.addEventListener('click', event => {
@@ -351,11 +381,45 @@ function refreshBulkProviderOptions() {
   });
 }
 
-async function loadPublicAccountTransactions(account) {
-  // Read A:E so paired transaction IDs (-D / -C) can be matched.
-  // This lets the public ledger show who sent a credit and who received a debit.
-  const rows = await fetchGvizSheet('TRANSACTION LOG', 'select A,B,C,D,E', 1);
+async function loadPublicAccountTransactions(account, month) {
+  /*
+    PERFORMANCE:
+    The old ledger downloaded the entire TRANSACTION LOG before the account
+    page could finish opening. The ledger now requests only the selected month.
+
+    We intentionally query every transaction in that month (not only this
+    account), because paired -D / -C rows are needed to resolve Sender /
+    Recipient correctly. One month is still dramatically smaller than the
+    complete historical log.
+  */
   const target = normalizeAccount(account);
+  const normalizedMonth = normalizeLedgerMonth(month);
+  const { startDate, endDate } = ledgerMonthRange(normalizedMonth);
+
+  let rows;
+
+  try {
+    rows = await fetchGvizSheet(
+      'TRANSACTION LOG',
+      `select A,B,C,D,E where B >= date '${startDate}' and B < date '${endDate}'`,
+      1
+    );
+  } catch (dateQueryError) {
+    /*
+      Compatibility fallback for an older sheet where Date may have been stored
+      as text. This fallback reads only the target account's history, then
+      filters locally by month. Pair names may be unavailable for legacy rows,
+      but the ledger remains usable instead of failing.
+    */
+    console.warn('Month-scoped TRANSACTION LOG query fallback:', dateQueryError);
+
+    const escapedAccount = gvizString(target);
+    rows = await fetchGvizSheet(
+      'TRANSACTION LOG',
+      `select A,B,C,D,E where C = '${escapedAccount}'`,
+      1
+    );
+  }
 
   const allTransactions = rows
     .map(row => ({
@@ -365,7 +429,8 @@ async function loadPublicAccountTransactions(account) {
       log: cellText(row[3]),
       description: cellText(row[4])
     }))
-    .filter(row => row.accountNumber);
+    .filter(row => row.accountNumber)
+    .filter(row => transactionMatchesMonth(row, normalizedMonth));
 
   const byTxId = new Map(
     allTransactions
@@ -381,6 +446,37 @@ async function loadPublicAccountTransactions(account) {
     }))
     .reverse();
 }
+
+function normalizeLedgerMonth(value) {
+  if (/^\d{4}-\d{2}$/.test(String(value || ''))) {
+    return String(value);
+  }
+
+  const now = new Date();
+  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+}
+
+function ledgerMonthRange(month) {
+  const normalized = normalizeLedgerMonth(month);
+  const [year, monthNumber] = normalized.split('-').map(Number);
+
+  const startDate = `${year}-${String(monthNumber).padStart(2, '0')}-01`;
+
+  const next = new Date(year, monthNumber, 1);
+  const endDate = [
+    next.getFullYear(),
+    String(next.getMonth() + 1).padStart(2, '0'),
+    '01'
+  ].join('-');
+
+  return { startDate, endDate };
+}
+
+function transactionMatchesMonth(row, month) {
+  const normalized = normalizeDateForInput(row.date);
+  return Boolean(normalized && normalized.slice(0, 7) === month);
+}
+
 
 function resolveTransactionCounterparty(row, byTxId) {
   const txId = String(row.txId || '').trim();
@@ -500,6 +596,8 @@ function goToHome() {
 
   state.currentAccount = null;
   state.currentTransactions = [];
+  state.ledgerLoadToken += 1;
+  state.ledgerLoading = false;
 
   els.accountView.classList.add('is-hidden');
   els.welcomeView.classList.remove('is-hidden');
@@ -527,50 +625,246 @@ function xProfileUrl(value) {
 
 async function searchAccount(rawAccount, silent = false) {
   const account = normalizeAccount(rawAccount);
+
   if (!account) {
     toast('Enter an account number first.', 'error');
     return;
   }
 
-  showLoading('Opening ledger…');
-  try {
-    // Run backend profile lookup and public transaction-log lookup together.
-    // This avoids waiting for one network request to finish before starting the other.
-    const [accountResult, ledgerResult] = await Promise.allSettled([
-      apiGet({ action: 'account', account }),
-      loadPublicAccountTransactions(account)
-    ]);
+  /*
+    PROFILE-FIRST OPENING:
+    MASTER DATA is already loaded for the website, so identity/balance can be
+    rendered immediately without waiting for TRANSACTION LOG.
+  */
+  let record = state.masterMap.get(account);
 
-    if (accountResult.status !== 'fulfilled') throw accountResult.reason;
-
-    const result = accountResult.value;
-    if (!result.success) throw new Error(result.message || 'Account not found');
-
-    state.currentAccount = account;
-
-    let ledgerRows = null;
-    if (ledgerResult.status === 'fulfilled') {
-      ledgerRows = ledgerResult.value;
-    } else {
-      console.warn('Public TRANSACTION LOG fallback failed:', ledgerResult.reason);
+  if (!record) {
+    // MASTER DATA may still be refreshing. Retry one focused public-sheet read
+    // before declaring the account missing.
+    try {
+      record = await loadSingleMasterAccount(account);
+    } catch (error) {
+      console.warn('Focused MASTER DATA lookup failed:', error);
     }
+  }
 
-    state.currentTransactions = ledgerRows !== null ? ledgerRows : (result.transactions || []);
-    renderProfile(result.profile);
-    renderTransactions(state.currentTransactions);
+  if (!record) {
+    toast('Account not found.', 'error');
+    return;
+  }
 
-    els.welcomeView.classList.add('is-hidden');
-    els.accountView.classList.remove('is-hidden');
-    document.body.classList.remove('home-view-active');
-    els.headerSearchInput.value = account;
-    els.heroSearchInput.value = account;
-    if (!silent) window.scrollTo({ top: 0, behavior: 'smooth' });
+  const openingNewAccount = state.currentAccount !== account;
+
+  state.currentAccount = account;
+  state.currentTransactions = [];
+  state.ledgerLoadToken += 1;
+
+  renderProfile(masterRecordToProfile(record));
+
+  els.welcomeView.classList.add('is-hidden');
+  els.accountView.classList.remove('is-hidden');
+  document.body.classList.remove('home-view-active');
+  els.headerSearchInput.value = account;
+  els.heroSearchInput.value = account;
+
+  if (openingNewAccount || !state.currentLedgerMonth) {
+    state.currentLedgerMonth = currentMonthValue();
+  }
+
+  els.ledgerMonth.value = state.currentLedgerMonth;
+
+  // Identity is now visible. Transaction history loads independently below.
+  if (!silent) {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  loadLedgerMonth(account, state.currentLedgerMonth);
+
+  /*
+    Refresh the exact MASTER record in the background. This can update a balance
+    or photo after the instant local render, but it never delays page opening.
+  */
+  refreshVisibleAccountProfile(account);
+}
+
+async function loadSingleMasterAccount(account) {
+  const rows = await fetchGvizSheet(
+    CONFIG.MASTER_SHEET,
+    'select B,C,D,E,F,G,H',
+    1
+  );
+
+  const record = rows
+    .map(row => ({
+      status: cellText(row[0]),
+      account: cellText(row[1]),
+      name: cellText(row[2]),
+      kanji: cellText(row[3]),
+      x: cellText(row[4]),
+      photo: cellText(row[5]),
+      balance: cellText(row[6])
+    }))
+    .find(item => normalizeAccount(item.account) === normalizeAccount(account));
+
+  if (record) {
+    state.masterMap.set(normalizeAccount(record.account), record);
+
+    const existingIndex = state.master.findIndex(
+      item => normalizeAccount(item.account) === normalizeAccount(record.account)
+    );
+
+    if (existingIndex >= 0) {
+      state.master[existingIndex] = record;
+    } else {
+      state.master.push(record);
+    }
+  }
+
+  return record || null;
+}
+
+function masterRecordToProfile(record) {
+  return {
+    status: record.status || '—',
+    accountNumber: record.account || '',
+    name: record.name || '—',
+    kanjiName: record.kanji || '—',
+    xUsername: cleanXUsername(record.x),
+    xUrl: xProfileUrl(record.x),
+    photo: record.photo || '',
+    balance: record.balance || 0
+  };
+}
+
+async function refreshVisibleAccountProfile(account) {
+  try {
+    /*
+      Use the existing shared MASTER refresh, but do not await it from the page
+      opening path. If another global sync is already active, the current local
+      profile remains visible.
+    */
+    await refreshSharedData();
+
+    if (state.currentAccount !== account) return;
+
+    const latest = state.masterMap.get(account);
+    if (latest) {
+      renderProfile(masterRecordToProfile(latest));
+    }
   } catch (error) {
-    toast(error.message || 'Unable to open account.', 'error');
-  } finally {
-    hideLoading();
+    console.warn('Background account profile refresh failed:', error);
   }
 }
+
+async function refreshCurrentAccountView() {
+  if (!state.currentAccount) return;
+
+  const account = state.currentAccount;
+  const month = els.ledgerMonth.value || state.currentLedgerMonth || currentMonthValue();
+
+  state.currentLedgerMonth = month;
+
+  const latest = state.masterMap.get(account);
+  if (latest) {
+    renderProfile(masterRecordToProfile(latest));
+  }
+
+  // Both refreshes are background-friendly and the profile remains visible.
+  refreshVisibleAccountProfile(account);
+  loadLedgerMonth(account, month);
+}
+
+async function loadLedgerMonth(account, month) {
+  account = normalizeAccount(account);
+  month = normalizeLedgerMonth(month);
+
+  if (!account || state.currentAccount !== account) return;
+
+  const token = ++state.ledgerLoadToken;
+  state.currentLedgerMonth = month;
+  els.ledgerMonth.value = month;
+
+  setLedgerLoading(true);
+
+  try {
+    const rows = await loadPublicAccountTransactions(account, month);
+
+    if (
+      token !== state.ledgerLoadToken ||
+      state.currentAccount !== account ||
+      state.currentLedgerMonth !== month
+    ) {
+      return;
+    }
+
+    state.currentTransactions = rows;
+    renderTransactions(rows);
+
+  } catch (error) {
+    if (
+      token !== state.ledgerLoadToken ||
+      state.currentAccount !== account
+    ) {
+      return;
+    }
+
+    state.currentTransactions = [];
+    renderTransactions([]);
+    toast('Unable to load this month’s transaction history.', 'error');
+    console.warn('Monthly ledger load failed:', error);
+
+  } finally {
+    if (token === state.ledgerLoadToken) {
+      setLedgerLoading(false);
+    }
+  }
+}
+
+function setLedgerLoading(loading) {
+  state.ledgerLoading = Boolean(loading);
+
+  els.transactionLoading.classList.toggle('is-hidden', !loading);
+
+  if (loading) {
+    els.transactionTableBody.innerHTML = '';
+    els.transactionCount.textContent = 'Loading…';
+    els.transactionEmpty.classList.add('is-hidden');
+    els.ledgerScrollNav.classList.add('is-hidden');
+    els.transactionScrollWrap.scrollTop = 0;
+  }
+
+  els.transactionScrollWrap.classList.toggle('is-loading', loading);
+}
+
+function currentMonthValue() {
+  const now = new Date();
+  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+}
+
+function updateLedgerScrollNavigation() {
+  if (!els.transactionScrollWrap || !els.ledgerScrollNav) return;
+
+  const hasOverflow =
+    els.transactionScrollWrap.scrollHeight >
+    els.transactionScrollWrap.clientHeight + 8;
+
+  els.ledgerScrollNav.classList.toggle(
+    'is-hidden',
+    !hasOverflow || state.ledgerLoading
+  );
+
+  if (!hasOverflow) return;
+
+  const atTop = els.transactionScrollWrap.scrollTop <= 6;
+  const atBottom =
+    els.transactionScrollWrap.scrollTop +
+      els.transactionScrollWrap.clientHeight >=
+    els.transactionScrollWrap.scrollHeight - 6;
+
+  els.ledgerScrollTop.disabled = atTop;
+  els.ledgerScrollBottom.disabled = atBottom;
+}
+
 
 function renderProfile(profile) {
   if (!profile) return;
@@ -602,7 +896,12 @@ function renderProfile(profile) {
 
 function renderTransactions(rows) {
   els.transactionTableBody.innerHTML = '';
-  els.transactionCount.textContent = `${rows.length} record${rows.length === 1 ? '' : 's'}`;
+
+  const monthText = state.currentLedgerMonth
+    ? monthLabel(state.currentLedgerMonth)
+    : '';
+
+  els.transactionCount.textContent = `${rows.length} record${rows.length === 1 ? '' : 's'}${monthText ? ` · ${monthText}` : ''}`;
   els.transactionEmpty.classList.toggle('is-hidden', rows.length !== 0);
 
   rows.forEach(row => {
@@ -618,6 +917,8 @@ function renderTransactions(rows) {
     `;
     els.transactionTableBody.appendChild(tr);
   });
+
+  window.requestAnimationFrame(updateLedgerScrollNavigation);
 }
 
 function transactionCounterpartyHtml(row, amount) {
@@ -1511,16 +1812,12 @@ async function processBatch(type, button) {
     return;
   }
 
-  // A second click while the same feature is already sending must never
-  // create another request.
   if (state.processingTypes.has(type)) {
-    toast('This transaction input is already being processed.', 'error');
     return;
   }
 
   const config = batchConfig(type);
 
-  // Input Staff always follows the authenticated teller identity.
   const inputStaff = {
     id: state.teller.id,
     name: state.teller.name
@@ -1553,8 +1850,6 @@ async function processBatch(type, button) {
     entries
   };
 
-  // The same unchanged form reuses the same request ID after a transport
-  // interruption. The backend therefore knows it is a retry, not a new batch.
   const pending = getOrCreatePendingBatchRequest(type, payload);
   payload.clientRequestId = pending.requestId;
 
@@ -1562,53 +1857,50 @@ async function processBatch(type, button) {
   setProcessButtonState(button, true, entries.length);
 
   try {
-    const result = await apiPostWithSafeRetry('batchTransaction', payload);
+    /*
+      The POST is only the write command. Its redirected Apps Script response
+      is intentionally NOT used as proof of success.
 
-    if (!result.success) {
-      if (result.safeToRetry !== false) {
-        clearPendingBatchRequest(type, payload.clientRequestId);
-      }
-
-      const error = new Error(result.message || 'Transaction batch failed');
-      error.safeToRetry = result.safeToRetry;
-      throw error;
-    }
+      Confirmation comes from GET batchStatus with the deterministic Request ID.
+      This removes the false-failure case where the sheet write succeeded but
+      the browser could not read the redirected POST response.
+    */
+    const result = await submitBatchAndConfirm(payload);
 
     clearPendingBatchRequest(type, payload.clientRequestId);
 
     if (result.duplicate || result.recovered) {
-      toast('Transaction was already recorded. No duplicate was created.', 'success');
+      toast('Transaction already existed. No duplicate was created.', 'success');
     } else {
       toast(`${result.processed || entries.length} input${entries.length > 1 ? 's' : ''} processed successfully.`, 'success');
     }
 
-    // Reset immediately after the backend confirms success.
-    // Shared-data refresh happens in the background, so the teller does not
-    // have to stare at the loading overlay after a successful write.
     resetBatchRows(type, rows.length);
 
-    refreshSharedData()
-      .then(() => {
-        if (state.currentAccount) return searchAccount(state.currentAccount, true);
-      })
-      .catch(error => console.warn('Post-transaction background refresh failed:', error));
+    // Never block PROCESS on slow refresh work.
+    window.setTimeout(() => {
+      refreshSharedData()
+        .then(() => {
+          if (state.currentAccount) {
+            return refreshCurrentAccountView();
+          }
+        })
+        .catch(error => console.warn('Background refresh failed:', error));
+    }, 50);
 
   } catch (error) {
-    if (error?.ambiguous === true) {
-      // Keep the request ID. Pressing PROCESS again with the same unchanged
-      // data safely reuses it; the backend will return the existing result.
-      toast(
-        'Connection response was interrupted. Do not duplicate the rows. Press PROCESS again safely—the same request ID will be reused.',
-        'error'
-      );
-    } else if (error?.safeToRetry === false) {
-      toast(
-        error.message || 'The request was partially detected and was blocked from being written twice. Review Transaction Inputs before retrying.',
-        'error'
-      );
-    } else {
+    if (error?.transactionFailed) {
       clearPendingBatchRequest(type, payload.clientRequestId);
-      toast(error.message || 'Transaction batch failed.', 'error');
+      toast(error.message || 'Transaction was rejected by the backend.', 'error');
+    } else {
+      /*
+        Keep the Request ID. A retry with unchanged rows reuses the same ID,
+        so the backend cannot write a second copy.
+      */
+      toast(
+        'Confirmation is temporarily unavailable. This Request ID is protected against duplicates. Press PROCESS again with the same rows to re-check safely.',
+        'error'
+      );
     }
   } finally {
     state.processingTypes.delete(type);
@@ -1630,6 +1922,122 @@ function setProcessButtonState(button, processing, count = 0) {
     button.textContent = button.dataset.defaultLabel || 'PROCESS';
     button.removeAttribute('aria-busy');
   }
+}
+
+async function submitBatchAndConfirm(payload) {
+  const expectedRows = payload.type === 'LAST_SALDO'
+    ? payload.entries.length
+    : payload.entries.length * 2;
+
+  payload.clientAttempt = 1;
+  dispatchBatchCommand(payload);
+
+  let confirmation = await waitForBatchConfirmation(
+    payload.clientRequestId,
+    expectedRows,
+    CONFIG.BATCH_FIRST_CONFIRM_MS
+  );
+
+  if (confirmation) return confirmation;
+
+  // Safe retry: same Request ID, never a new financial request.
+  payload.clientAttempt = 2;
+  dispatchBatchCommand(payload);
+
+  confirmation = await waitForBatchConfirmation(
+    payload.clientRequestId,
+    expectedRows,
+    CONFIG.BATCH_SECOND_CONFIRM_MS
+  );
+
+  if (confirmation) return confirmation;
+
+  const error = new Error('Transaction confirmation timed out.');
+  error.confirmationUnavailable = true;
+  throw error;
+}
+
+function dispatchBatchCommand(payload) {
+  const url = new URL(CONFIG.API_URL);
+  url.searchParams.set('action', 'batchTransaction');
+  url.searchParams.set('_', Date.now());
+
+  const body = new URLSearchParams();
+  body.set('action', 'batchTransaction');
+  body.set('payload', JSON.stringify(payload));
+
+  /*
+    no-cors is intentional. The write command can reach Apps Script without
+    requiring the browser to read the redirected ContentService POST response.
+    The independent GET batchStatus endpoint is the source of truth.
+  */
+  fetch(url.toString(), {
+    method: 'POST',
+    mode: 'no-cors',
+    redirect: 'follow',
+    cache: 'no-store',
+    body
+  }).catch(error => {
+    console.warn('Batch command transport warning:', error);
+  });
+}
+
+async function waitForBatchConfirmation(requestId, expectedRows, timeoutMs) {
+  const startedAt = Date.now();
+  let recordedSince = 0;
+
+  while (Date.now() - startedAt < timeoutMs) {
+    try {
+      const status = await apiGet({
+        action: 'batchStatus',
+        requestId,
+        expectedRows
+      });
+
+      if (status?.success) {
+        if (status.state === 'COMPLETED') {
+          return status.result || {
+            success: true,
+            processed: 0,
+            clientRequestId: requestId
+          };
+        }
+
+        if (status.state === 'FAILED') {
+          const error = new Error(status.message || 'Transaction was rejected by the backend.');
+          error.transactionFailed = true;
+          throw error;
+        }
+
+        if (status.state === 'RECORDED') {
+          if (!recordedSince) recordedSince = Date.now();
+
+          // The log rows themselves are deterministic proof that the same
+          // request has reached the ledger. Give completion receipt a short
+          // grace period, then accept the recorded state rather than falsely
+          // telling the teller it failed.
+          if (Date.now() - recordedSince >= CONFIG.BATCH_RECORDED_GRACE_MS) {
+            return {
+              success: true,
+              processed: status.processed || 0,
+              ledgerRowsWritten: status.existingRows || expectedRows,
+              clientRequestId: requestId,
+              recordedConfirmation: true
+            };
+          }
+        } else {
+          recordedSince = 0;
+        }
+      }
+    } catch (error) {
+      if (error?.transactionFailed) throw error;
+      console.warn('Batch confirmation check warning:', error);
+    }
+
+    await delay(CONFIG.BATCH_STATUS_INTERVAL_MS);
+  }
+
+  return null;
 }
 
 function getOrCreatePendingBatchRequest(type, payload) {
@@ -1700,28 +2108,6 @@ function createClientRequestId() {
     : `${Math.random().toString(36).slice(2)}${Math.random().toString(36).slice(2)}`;
 
   return `Z${Date.now().toString(36).toUpperCase()}${randomPart.slice(0, 18).toUpperCase()}`;
-}
-
-async function apiPostWithSafeRetry(action, payload) {
-  let lastError = null;
-
-  for (let attempt = 0; attempt < 2; attempt++) {
-    try {
-      return await apiPost(action, payload, {
-        timeoutMs: CONFIG.POST_TIMEOUT_MS
-      });
-    } catch (error) {
-      lastError = error;
-
-      if (!error?.ambiguous || attempt === 1) {
-        throw error;
-      }
-
-      await delay(CONFIG.POST_RETRY_DELAY_MS);
-    }
-  }
-
-  throw lastError || new Error('Transaction request failed.');
 }
 
 function delay(ms) {
@@ -1929,7 +2315,7 @@ async function saveTransactionRevision(event) {
     toast('Transaction revised.', 'success');
     await refreshSharedData();
     await loadMonthlyReport();
-    if (state.currentAccount) await searchAccount(state.currentAccount, true);
+    if (state.currentAccount) await refreshCurrentAccountView();
   } catch (error) {
     toast(error.message, 'error');
   } finally {
@@ -1954,7 +2340,7 @@ async function deleteTransaction(txId) {
     toast('Transaction deleted.', 'success');
     await refreshSharedData();
     await loadMonthlyReport();
-    if (state.currentAccount) await searchAccount(state.currentAccount, true);
+    if (state.currentAccount) await refreshCurrentAccountView();
   } catch (error) {
     toast(error.message, 'error');
   } finally {

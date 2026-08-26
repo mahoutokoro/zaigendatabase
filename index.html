@@ -106,9 +106,13 @@
             <p class="eyebrow">ACCOUNT ACTIVITY</p>
             <h3>Transaction Log</h3>
           </div>
-          <div class="ledger-tools">
+          <div class="ledger-tools ledger-filter-tools">
+            <label class="ledger-month-control">
+              <span>Month</span>
+              <input id="ledgerMonth" type="month" aria-label="Transaction month" />
+            </label>
             <span id="transactionCount">0 records</span>
-            <button id="refreshAccountButton" class="icon-button" type="button" title="Refresh">↻</button>
+            <button id="refreshAccountButton" class="icon-button" type="button" title="Refresh account">↻</button>
           </div>
         </div>
 
@@ -118,19 +122,35 @@
           <span>This ledger will update when a teller records a transaction.</span>
         </div>
 
-        <div class="table-wrap">
-          <table class="ledger-table">
-            <thead>
-              <tr>
-                <th>Date</th>
-                <th>Transaction</th>
-                <th>Sender / Recipient</th>
-                <th>Description</th>
-                <th class="money-col">Amount</th>
-              </tr>
-            </thead>
-            <tbody id="transactionTableBody"></tbody>
-          </table>
+        <div id="transactionLoading" class="ledger-inline-loading is-hidden" role="status" aria-live="polite">
+          <span class="ledger-inline-spinner" aria-hidden="true"></span>
+          <div>
+            <strong>Loading transaction history…</strong>
+            <small>Account identity is already available while this month loads.</small>
+          </div>
+        </div>
+
+        <div class="ledger-scroll-shell">
+          <div id="transactionScrollWrap" class="table-wrap ledger-scroll-wrap">
+            <table class="ledger-table">
+              <thead>
+                <tr>
+                  <th>Date</th>
+                  <th>Transaction</th>
+                  <th>Sender / Recipient</th>
+                  <th>Description</th>
+                  <th class="money-col">Amount</th>
+                </tr>
+              </thead>
+              <tbody id="transactionTableBody"></tbody>
+            </table>
+          </div>
+
+          <div id="ledgerScrollNav" class="ledger-scroll-nav is-hidden" aria-label="Transaction log scroll navigation">
+            <button id="ledgerScrollTop" type="button" title="Scroll to top" aria-label="Scroll transaction log to top">↑</button>
+            <span>SCROLL</span>
+            <button id="ledgerScrollBottom" type="button" title="Scroll to bottom" aria-label="Scroll transaction log to bottom">↓</button>
+          </div>
         </div>
       </section>
     </section>
