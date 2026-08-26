@@ -10,7 +10,12 @@ const CONFIG = {
   MAX_ROWS: 100,
   ROW_STEP: 5,
   CURRENCY: '両',
-  GLOBAL_SYNC_INTERVAL_MS: 30000
+  GLOBAL_SYNC_INTERVAL_MS: 30000,
+  TELLER_SESSION_KEY: 'zaigenOfficeTellerSession',
+  BATCH_REQUEST_STORAGE_KEY: 'zaigenOfficePendingBatchRequests',
+  BATCH_REQUEST_TTL_MS: 6 * 60 * 60 * 1000,
+  POST_TIMEOUT_MS: 25000,
+  POST_RETRY_DELAY_MS: 650
 };
 
 const state = {
@@ -34,7 +39,8 @@ const state = {
     TRANSFER: 'MULTI',
     SALARY: 'MULTI',
     REWARD: 'MULTI'
-  }
+  },
+  processingTypes: new Set()
 };
 
 const $ = (selector, root = document) => root.querySelector(selector);
@@ -45,6 +51,8 @@ const els = {};
 document.addEventListener('DOMContentLoaded', async () => {
   cacheElements();
   setBrandAssets();
+  document.body.classList.add('home-view-active');
+  updateTellerSessionUi();
   bindGlobalEvents();
   initializeRowControls();
   setDefaultMonth();
@@ -57,6 +65,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     populateStaffSelectors();
     refreshProviderSelectOptions();
     refreshBulkProviderOptions();
+    restoreTellerSession();
   } catch (error) {
     console.error(error);
     toast('Public spreadsheet data could not be loaded. Check sharing permissions.', 'error');
@@ -71,8 +80,8 @@ function cacheElements() {
     'profilePhoto','profileStatusBadge','profileName','profileKanji','profileAccount','profileX','profileBalance',
     'balanceStatusText','transactionTableBody','transactionCount','transactionEmpty','refreshAccountButton',
     'tellerButton','tellerLoginModal','tellerLoginForm','tellerIdInput','tellerPasswordInput','tellerWorkspace',
-    'loggedTellerName','loggedTellerId','tellerLogoutButton','closeWorkspaceButton','tellerNav','workspaceTitle',
-    'loadingOverlay','loadingText','toastRegion','reportMonth','loadReportButton','exportPdfButton','exportPngButton',
+    'loggedTellerName','loggedTellerId','tellerLogoutButton','closeWorkspaceButton','tellerNav',
+    'loadingOverlay','loadingText','toastRegion','reportMonth','loadReportButton','reportSearchInput','reportSearchButton','exportPdfButton','exportPngButton',
     'reportMonthLabel','reportTableBody','reportEmpty','reportDocument','editTransactionModal','editTransactionForm',
     'editTransactionId','editTransactionDate','editTransactionAmount','editTransactionDescription','editTransactionStaff',
     'bankLogo','workspaceLogo','tellerLoginLogo','tellerPasswordToggle','allAccountSearch','allAccountStatusFilter','allAccountTableBody',
@@ -104,7 +113,27 @@ function bindGlobalEvents() {
     if (state.currentAccount) searchAccount(state.currentAccount, true);
   });
 
-  els.tellerButton.addEventListener('click', () => openModal('tellerLoginModal'));
+  $$('[data-home-logo]').forEach(logo => {
+    logo.addEventListener('click', event => {
+      event.preventDefault();
+      goToHome();
+    });
+
+    logo.addEventListener('keydown', event => {
+      if (event.key === 'Enter' || event.key === ' ') {
+        event.preventDefault();
+        goToHome();
+      }
+    });
+  });
+
+  els.tellerButton.addEventListener('click', () => {
+    if (state.teller) {
+      openTellerWorkspace();
+    } else {
+      openModal('tellerLoginModal');
+    }
+  });
   els.tellerLoginForm.addEventListener('submit', loginTeller);
   if (els.tellerPasswordToggle) {
     els.tellerPasswordToggle.addEventListener('click', toggleTellerPasswordVisibility);
@@ -155,11 +184,24 @@ function bindGlobalEvents() {
 
   els.loadReportButton.addEventListener('click', loadMonthlyReport);
   els.reportMonth.addEventListener('change', loadMonthlyReport);
+  els.reportSearchButton.addEventListener('click', searchTransactionInputs);
+  els.reportSearchInput.addEventListener('keydown', event => {
+    if (event.key === 'Enter') {
+      event.preventDefault();
+      searchTransactionInputs();
+    }
+  });
+  els.reportSearchInput.addEventListener('search', () => {
+    if (!els.reportSearchInput.value.trim()) {
+      renderMonthlyReport(state.reportRows, els.reportMonth.value);
+    }
+  });
   els.exportPdfButton.addEventListener('click', exportReportPdf);
   els.exportPngButton.addEventListener('click', exportReportPng);
   els.reportTableBody.addEventListener('click', handleReportAction);
   els.allAccountSearch.addEventListener('input', renderAllAccounts);
   els.allAccountStatusFilter.addEventListener('change', renderAllAccounts);
+  document.addEventListener('click', handleLedgerNavigationClick);
   els.editTransactionForm.addEventListener('submit', saveTransactionRevision);
   els.editTransactionAmount.addEventListener('input', formatMoneyInput);
 
@@ -409,14 +451,63 @@ function renderAllAccounts() {
     const xLabel = cleanXUsername(item.x);
     return `
       <tr class="${frozenAccount ? 'account-row-frozen' : ''}">
-        <td><strong>${escapeHtml(item.account)}</strong></td>
-        <td>${escapeHtml(item.name || '—')}</td>
+        <td>
+          <button class="account-ledger-link account-number-link" type="button" data-open-ledger="${escapeAttr(item.account)}">
+            ${escapeHtml(item.account)}
+          </button>
+        </td>
+        <td>
+          <button class="account-ledger-link account-name-link" type="button" data-open-ledger="${escapeAttr(item.account)}">
+            ${escapeHtml(item.name || '—')}
+          </button>
+        </td>
         <td class="kanji-cell">${escapeHtml(item.kanji || '—')}</td>
         <td><span class="directory-status ${frozenAccount ? 'frozen' : ''}">${escapeHtml(item.status || '—')}</span></td>
         <td>${xUrl ? `<a href="${escapeAttr(xUrl)}" target="_blank" rel="noopener noreferrer">@${escapeHtml(xLabel)}</a>` : '—'}</td>
         <td class="money-col"><strong>${escapeHtml(formatCurrency(item.balance))}</strong></td>
       </tr>`;
   }).join('');
+}
+
+function handleLedgerNavigationClick(event) {
+  const trigger = event.target.closest('[data-open-ledger]');
+  if (!trigger) return;
+
+  const account = normalizeAccount(trigger.dataset.openLedger);
+  if (!account) return;
+
+  event.preventDefault();
+  openLedgerFromLink(account);
+}
+
+function openLedgerFromLink(account) {
+  account = normalizeAccount(account);
+  if (!account) return;
+
+  // Leaving the Teller Desk does not log the teller out.
+  closeTellerWorkspace();
+  $$('.modal-shell:not(.is-hidden)').forEach(modal => closeModal(modal.id));
+
+  els.headerSearchInput.value = account;
+  els.heroSearchInput.value = account;
+  searchAccount(account);
+}
+
+function goToHome() {
+  // Home navigation never logs the teller out.
+  closeTellerWorkspace();
+  $$('.modal-shell:not(.is-hidden)').forEach(modal => closeModal(modal.id));
+
+  state.currentAccount = null;
+  state.currentTransactions = [];
+
+  els.accountView.classList.add('is-hidden');
+  els.welcomeView.classList.remove('is-hidden');
+  document.body.classList.add('home-view-active');
+  els.headerSearchInput.value = '';
+  els.heroSearchInput.value = '';
+
+  window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
 function cleanXUsername(value) {
@@ -443,22 +534,34 @@ async function searchAccount(rawAccount, silent = false) {
 
   showLoading('Opening ledger…');
   try {
-    const result = await apiGet({ action: 'account', account });
+    // Run backend profile lookup and public transaction-log lookup together.
+    // This avoids waiting for one network request to finish before starting the other.
+    const [accountResult, ledgerResult] = await Promise.allSettled([
+      apiGet({ action: 'account', account }),
+      loadPublicAccountTransactions(account)
+    ]);
+
+    if (accountResult.status !== 'fulfilled') throw accountResult.reason;
+
+    const result = accountResult.value;
     if (!result.success) throw new Error(result.message || 'Account not found');
 
     state.currentAccount = account;
+
     let ledgerRows = null;
-    try {
-      ledgerRows = await loadPublicAccountTransactions(account);
-    } catch (ledgerError) {
-      console.warn('Public TRANSACTION LOG fallback failed:', ledgerError);
+    if (ledgerResult.status === 'fulfilled') {
+      ledgerRows = ledgerResult.value;
+    } else {
+      console.warn('Public TRANSACTION LOG fallback failed:', ledgerResult.reason);
     }
+
     state.currentTransactions = ledgerRows !== null ? ledgerRows : (result.transactions || []);
     renderProfile(result.profile);
     renderTransactions(state.currentTransactions);
 
     els.welcomeView.classList.add('is-hidden');
     els.accountView.classList.remove('is-hidden');
+    document.body.classList.remove('home-view-active');
     els.headerSearchInput.value = account;
     els.heroSearchInput.value = account;
     if (!silent) window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -476,6 +579,11 @@ function renderProfile(profile) {
   els.profileName.textContent = profile.name || '—';
   els.profileKanji.textContent = profile.kanjiName || '—';
   els.profileAccount.textContent = profile.accountNumber || '—';
+
+  const profileLedgerAccount = normalizeAccount(profile.accountNumber);
+  els.profileName.dataset.openLedger = profileLedgerAccount;
+  els.profileAccount.dataset.openLedger = profileLedgerAccount;
+
   els.profileStatusBadge.textContent = status;
   els.profilePhoto.src = normalizeImageUrl(profile.photo);
   els.profilePhoto.onerror = () => { els.profilePhoto.src = fallbackAvatar(profile.name); };
@@ -521,11 +629,20 @@ function transactionCounterpartyHtml(row, amount) {
     return '<span class="counterparty-empty">—</span>';
   }
 
+  if (!account) {
+    return `
+      <div class="counterparty-cell">
+        <span>${escapeHtml(role)}</span>
+        <strong>${escapeHtml(name || '—')}</strong>
+      </div>
+    `;
+  }
+
   return `
     <div class="counterparty-cell">
       <span>${escapeHtml(role)}</span>
-      <strong>${escapeHtml(name || '—')}</strong>
-      ${account ? `<small>${escapeHtml(account)}</small>` : ''}
+      <button class="ledger-inline-link ledger-name-link" type="button" data-open-ledger="${escapeAttr(account)}">${escapeHtml(name || '—')}</button>
+      <button class="ledger-inline-link ledger-account-link" type="button" data-open-ledger="${escapeAttr(account)}">${escapeHtml(account)}</button>
     </div>
   `;
 }
@@ -562,8 +679,8 @@ async function loginTeller(event) {
     if (!teller) throw new Error('Teller login rejected. Staff ID or password does not match the STAFF sheet.');
 
     state.teller = teller;
-    els.loggedTellerName.textContent = teller.name;
-    els.loggedTellerId.textContent = teller.id;
+    persistTellerSession(teller);
+    updateTellerSessionUi();
     closeModal('tellerLoginModal');
     openTellerWorkspace();
     toast(`Teller access granted to ${teller.name}.`, 'success');
@@ -578,11 +695,105 @@ async function loginTeller(event) {
 
 function logoutTeller() {
   state.teller = null;
+  clearTellerSession();
+  updateTellerSessionUi();
   closeTellerWorkspace();
   els.tellerIdInput.value = '';
   els.tellerPasswordInput.value = '';
   setTellerPasswordVisibility(false);
   toast('Teller session closed.');
+}
+
+function persistTellerSession(teller) {
+  if (!teller?.id || !teller?.name) return;
+
+  try {
+    localStorage.setItem(
+      CONFIG.TELLER_SESSION_KEY,
+      JSON.stringify({
+        id: teller.id,
+        name: teller.name
+      })
+    );
+  } catch (error) {
+    console.warn('Unable to persist teller session:', error);
+  }
+}
+
+function clearTellerSession() {
+  try {
+    localStorage.removeItem(CONFIG.TELLER_SESSION_KEY);
+  } catch (error) {
+    console.warn('Unable to clear teller session:', error);
+  }
+}
+
+function restoreTellerSession() {
+  let saved = null;
+
+  try {
+    const raw = localStorage.getItem(CONFIG.TELLER_SESSION_KEY);
+    if (!raw) {
+      updateTellerSessionUi();
+      return;
+    }
+    saved = JSON.parse(raw);
+  } catch (error) {
+    clearTellerSession();
+    updateTellerSessionUi();
+    return;
+  }
+
+  const id = String(saved?.id || '').trim();
+  const name = String(saved?.name || '').trim();
+
+  if (!id || !name) {
+    clearTellerSession();
+    updateTellerSessionUi();
+    return;
+  }
+
+  // Revalidate the saved identity against the current STAFF directory.
+  // Passwords are never saved in localStorage.
+  const currentStaff = state.staff.find(staff => staff.id === id && staff.name === name);
+
+  if (!currentStaff) {
+    clearTellerSession();
+    updateTellerSessionUi();
+    return;
+  }
+
+  state.teller = {
+    id: currentStaff.id,
+    name: currentStaff.name
+  };
+
+  updateTellerSessionUi();
+}
+
+function updateTellerSessionUi() {
+  const loggedIn = Boolean(state.teller);
+
+  if (els.loggedTellerName) {
+    els.loggedTellerName.textContent = loggedIn ? state.teller.name : '—';
+  }
+  if (els.loggedTellerId) {
+    els.loggedTellerId.textContent = loggedIn ? state.teller.id : '—';
+  }
+
+  if (els.tellerButton) {
+    els.tellerButton.innerHTML = loggedIn
+      ? '<span class="status-dot"></span> OPEN TELLER DESK'
+      : '<span class="status-dot"></span> TELLER LOGIN';
+  }
+
+  $$('.process-staff-name').forEach(element => {
+    element.textContent = loggedIn ? state.teller.name : '—';
+  });
+
+  $$('.process-staff-id').forEach(element => {
+    element.textContent = loggedIn ? state.teller.id : '—';
+  });
 }
 
 function openTellerWorkspace() {
@@ -601,15 +812,7 @@ function closeTellerWorkspace() {
 function switchTellerPanel(panelId, button) {
   $$('.teller-panel').forEach(panel => panel.classList.toggle('active', panel.id === panelId));
   $$('#tellerNav button').forEach(btn => btn.classList.toggle('active', btn === button));
-  const titleMap = {
-    lastBalancePanel: 'Last Saldo Input',
-    transferPanel: 'Personal Transfer',
-    salaryPanel: 'Shop & Office Salary / Royalty',
-    rewardPanel: 'Reward',
-    reportsPanel: 'Transaction Inputs',
-    allAccountsPanel: 'All Accounts'
-  };
-  els.workspaceTitle.textContent = titleMap[panelId] || 'Teller Desk';
+
   if (panelId === 'reportsPanel') loadMonthlyReport();
   if (panelId === 'allAccountsPanel') {
     refreshSharedData().then(renderAllAccounts);
@@ -953,10 +1156,10 @@ function validateBulkProvider(type) {
 
 function batchConfig(type) {
   return {
-    LAST_SALDO: { panelId: 'lastBalancePanel', gridId: 'lastBalanceGrid', staffId: 'lastBalanceStaff', className: 'last-saldo' },
-    TRANSFER: { panelId: 'transferPanel', gridId: 'transferGrid', staffId: 'transferStaff', className: 'transfer' },
-    SALARY: { panelId: 'salaryPanel', gridId: 'salaryGrid', staffId: 'salaryStaff', className: 'provider' },
-    REWARD: { panelId: 'rewardPanel', gridId: 'rewardGrid', staffId: 'rewardStaff', className: 'provider' }
+    LAST_SALDO: { panelId: 'lastBalancePanel', gridId: 'lastBalanceGrid', className: 'last-saldo' },
+    TRANSFER: { panelId: 'transferPanel', gridId: 'transferGrid', className: 'transfer' },
+    SALARY: { panelId: 'salaryPanel', gridId: 'salaryGrid', className: 'provider' },
+    REWARD: { panelId: 'rewardPanel', gridId: 'rewardGrid', className: 'provider' }
   }[type];
 }
 
@@ -1308,15 +1511,20 @@ async function processBatch(type, button) {
     return;
   }
 
-  const config = batchConfig(type);
-  const staffSelect = document.getElementById(config.staffId);
-  const inputStaffId = staffSelect.value;
-  const inputStaff = state.staff.find(x => x.id === inputStaffId);
-  if (!inputStaff) {
-    toast('Select the staff member responsible for this input.', 'error');
-    staffSelect.focus();
+  // A second click while the same feature is already sending must never
+  // create another request.
+  if (state.processingTypes.has(type)) {
+    toast('This transaction input is already being processed.', 'error');
     return;
   }
+
+  const config = batchConfig(type);
+
+  // Input Staff always follows the authenticated teller identity.
+  const inputStaff = {
+    id: state.teller.id,
+    name: state.teller.name
+  };
 
   const rows = $$('.batch-row', document.getElementById(config.gridId));
   const entries = [];
@@ -1345,22 +1553,179 @@ async function processBatch(type, button) {
     entries
   };
 
-  button.disabled = true;
-  showLoading(`Processing ${entries.length} transaction input${entries.length > 1 ? 's' : ''}…`);
+  // The same unchanged form reuses the same request ID after a transport
+  // interruption. The backend therefore knows it is a retry, not a new batch.
+  const pending = getOrCreatePendingBatchRequest(type, payload);
+  payload.clientRequestId = pending.requestId;
+
+  state.processingTypes.add(type);
+  setProcessButtonState(button, true, entries.length);
+
   try {
-    const result = await apiPost('batchTransaction', payload);
-    if (!result.success) throw new Error(result.message || 'Transaction batch failed');
-    toast(`${result.processed || entries.length} input${entries.length > 1 ? 's' : ''} processed successfully.`, 'success');
-    await refreshSharedData();
+    const result = await apiPostWithSafeRetry('batchTransaction', payload);
+
+    if (!result.success) {
+      if (result.safeToRetry !== false) {
+        clearPendingBatchRequest(type, payload.clientRequestId);
+      }
+
+      const error = new Error(result.message || 'Transaction batch failed');
+      error.safeToRetry = result.safeToRetry;
+      throw error;
+    }
+
+    clearPendingBatchRequest(type, payload.clientRequestId);
+
+    if (result.duplicate || result.recovered) {
+      toast('Transaction was already recorded. No duplicate was created.', 'success');
+    } else {
+      toast(`${result.processed || entries.length} input${entries.length > 1 ? 's' : ''} processed successfully.`, 'success');
+    }
+
+    // Reset immediately after the backend confirms success.
+    // Shared-data refresh happens in the background, so the teller does not
+    // have to stare at the loading overlay after a successful write.
     resetBatchRows(type, rows.length);
-    if (state.currentAccount) await searchAccount(state.currentAccount, true);
-    if ($('#reportsPanel').classList.contains('active')) await loadMonthlyReport();
+
+    refreshSharedData()
+      .then(() => {
+        if (state.currentAccount) return searchAccount(state.currentAccount, true);
+      })
+      .catch(error => console.warn('Post-transaction background refresh failed:', error));
+
   } catch (error) {
-    toast(error.message || 'Transaction batch failed.', 'error');
+    if (error?.ambiguous === true) {
+      // Keep the request ID. Pressing PROCESS again with the same unchanged
+      // data safely reuses it; the backend will return the existing result.
+      toast(
+        'Connection response was interrupted. Do not duplicate the rows. Press PROCESS again safely—the same request ID will be reused.',
+        'error'
+      );
+    } else if (error?.safeToRetry === false) {
+      toast(
+        error.message || 'The request was partially detected and was blocked from being written twice. Review Transaction Inputs before retrying.',
+        'error'
+      );
+    } else {
+      clearPendingBatchRequest(type, payload.clientRequestId);
+      toast(error.message || 'Transaction batch failed.', 'error');
+    }
   } finally {
-    button.disabled = false;
-    hideLoading();
+    state.processingTypes.delete(type);
+    setProcessButtonState(button, false);
   }
+}
+
+function setProcessButtonState(button, processing, count = 0) {
+  if (!button) return;
+
+  button.disabled = processing;
+  button.classList.toggle('is-processing', processing);
+
+  if (processing) {
+    button.dataset.defaultLabel = button.dataset.defaultLabel || button.textContent.trim() || 'PROCESS';
+    button.innerHTML = `<span class="process-spinner" aria-hidden="true"></span><span>PROCESSING${count > 1 ? ` ${count}` : ''}…</span>`;
+    button.setAttribute('aria-busy', 'true');
+  } else {
+    button.textContent = button.dataset.defaultLabel || 'PROCESS';
+    button.removeAttribute('aria-busy');
+  }
+}
+
+function getOrCreatePendingBatchRequest(type, payload) {
+  const fingerprint = batchRequestFingerprint(payload);
+  const store = readPendingBatchRequests();
+  const current = store[type];
+  const now = Date.now();
+
+  if (
+    current &&
+    current.requestId &&
+    current.fingerprint === fingerprint &&
+    now - Number(current.createdAt || 0) <= CONFIG.BATCH_REQUEST_TTL_MS
+  ) {
+    return current;
+  }
+
+  const next = {
+    requestId: createClientRequestId(),
+    fingerprint,
+    createdAt: now
+  };
+
+  store[type] = next;
+  writePendingBatchRequests(store);
+  return next;
+}
+
+function clearPendingBatchRequest(type, requestId) {
+  const store = readPendingBatchRequests();
+  if (!store[type]) return;
+  if (requestId && store[type].requestId !== requestId) return;
+  delete store[type];
+  writePendingBatchRequests(store);
+}
+
+function readPendingBatchRequests() {
+  try {
+    const raw = localStorage.getItem(CONFIG.BATCH_REQUEST_STORAGE_KEY);
+    if (!raw) return {};
+    const parsed = JSON.parse(raw);
+    return parsed && typeof parsed === 'object' ? parsed : {};
+  } catch (error) {
+    return {};
+  }
+}
+
+function writePendingBatchRequests(store) {
+  try {
+    localStorage.setItem(CONFIG.BATCH_REQUEST_STORAGE_KEY, JSON.stringify(store || {}));
+  } catch (error) {
+    console.warn('Unable to persist batch request state:', error);
+  }
+}
+
+function batchRequestFingerprint(payload) {
+  return JSON.stringify({
+    type: payload.type,
+    tellerId: payload.tellerId,
+    inputStaffId: payload.inputStaffId,
+    entries: payload.entries
+  });
+}
+
+function createClientRequestId() {
+  const randomPart = (window.crypto && typeof window.crypto.randomUUID === 'function')
+    ? window.crypto.randomUUID().replace(/-/g, '')
+    : `${Math.random().toString(36).slice(2)}${Math.random().toString(36).slice(2)}`;
+
+  return `Z${Date.now().toString(36).toUpperCase()}${randomPart.slice(0, 18).toUpperCase()}`;
+}
+
+async function apiPostWithSafeRetry(action, payload) {
+  let lastError = null;
+
+  for (let attempt = 0; attempt < 2; attempt++) {
+    try {
+      return await apiPost(action, payload, {
+        timeoutMs: CONFIG.POST_TIMEOUT_MS
+      });
+    } catch (error) {
+      lastError = error;
+
+      if (!error?.ambiguous || attempt === 1) {
+        throw error;
+      }
+
+      await delay(CONFIG.POST_RETRY_DELAY_MS);
+    }
+  }
+
+  throw lastError || new Error('Transaction request failed.');
+}
+
+function delay(ms) {
+  return new Promise(resolve => window.setTimeout(resolve, ms));
 }
 
 function extractBatchRow(type, row) {
@@ -1424,7 +1789,7 @@ function extractBatchRow(type, row) {
   if (type === 'REWARD') {
     const status = normalizeStatus(provider.status);
     if (!status.includes('OFFICE/SHOP') && !status.includes('STAFF')) {
-      throw new Error(`Provider ${provider.account} is not eligible for Reward.`);
+      throw new Error(`Provider ${provider.account} is not eligible for Rewards.`);
     }
   }
   return { date, provider: provider.account, recipient: recipient.account, amount, description };
@@ -1450,11 +1815,37 @@ async function loadMonthlyReport() {
     const result = await apiGet({ action: 'monthlyLog', month: els.reportMonth.value });
     if (!result.success) throw new Error(result.message || 'Unable to load report');
     state.reportRows = result.data || [];
-    renderMonthlyReport(state.reportRows, els.reportMonth.value);
+
+    if (els.reportSearchInput?.value.trim()) {
+      searchTransactionInputs();
+    } else {
+      renderMonthlyReport(state.reportRows, els.reportMonth.value);
+    }
   } catch (error) {
     toast(error.message, 'error');
   } finally {
     hideLoading();
+  }
+}
+
+function searchTransactionInputs() {
+  const query = String(els.reportSearchInput?.value || '').trim().toLowerCase();
+
+  if (!query) {
+    renderMonthlyReport(state.reportRows, els.reportMonth.value);
+    return;
+  }
+
+  const matches = state.reportRows.filter(row =>
+    String(row.txId || '').toLowerCase().includes(query)
+  );
+
+  renderMonthlyReport(matches, els.reportMonth.value);
+
+  if (!matches.length) {
+    toast(`No Transaction ID matching "${els.reportSearchInput.value.trim()}" was found in this month.`, 'error');
+  } else {
+    toast(`${matches.length} matching transaction${matches.length === 1 ? '' : 's'} found.`, 'success');
   }
 }
 
@@ -1467,10 +1858,12 @@ function renderMonthlyReport(rows, month) {
     const amount = parseMoney(row.log);
     const canEdit = Boolean(row.canEdit && row.txId);
     const tr = document.createElement('tr');
+    const ledgerAccount = normalizeAccount(row.accountNumber);
+
     tr.innerHTML = `
       <td>${escapeHtml(formatDateDisplay(row.date))}</td>
-      <td>${escapeHtml(row.accountNumber || '')}</td>
-      <td>${escapeHtml(row.name || '—')}</td>
+      <td>${ledgerAccount ? `<button class="ledger-inline-link ledger-account-link" type="button" data-open-ledger="${escapeAttr(ledgerAccount)}">${escapeHtml(row.accountNumber || '')}</button>` : '—'}</td>
+      <td>${ledgerAccount ? `<button class="ledger-inline-link ledger-name-link" type="button" data-open-ledger="${escapeAttr(ledgerAccount)}">${escapeHtml(row.name || '—')}</button>` : escapeHtml(row.name || '—')}</td>
       <td>${escapeHtml(row.description || '—')}</td>
       <td>${escapeHtml(row.staffName || '—')}</td>
       <td class="money-col ${amount < 0 ? 'amount-negative' : 'amount-positive'}">${escapeHtml(formatCurrency(amount, true))}</td>
@@ -1645,7 +2038,7 @@ async function apiGet(params) {
   return response.json();
 }
 
-async function apiPost(action, payload) {
+async function apiPost(action, payload, options = {}) {
   // Put the action in BOTH the query string and POST body. Apps Script normally
   // exposes either one through e.parameter, but duplicating it makes the request
   // resilient to redirects / deployment quirks and prevents a blank action.
@@ -1657,19 +2050,62 @@ async function apiPost(action, payload) {
   body.set('action', action);
   body.set('payload', JSON.stringify(payload));
 
-  const response = await fetch(url.toString(), {
-    method: 'POST',
-    redirect: 'follow',
-    cache: 'no-store',
-    body
-  });
+  const timeoutMs = Number(options.timeoutMs) > 0
+    ? Number(options.timeoutMs)
+    : CONFIG.POST_TIMEOUT_MS;
 
-  if (!response.ok) throw new Error(`API request failed (${response.status})`);
+  const controller = new AbortController();
+  const timer = window.setTimeout(() => controller.abort(), timeoutMs);
 
-  const result = await response.json();
+  let response;
+
+  try {
+    response = await fetch(url.toString(), {
+      method: 'POST',
+      redirect: 'follow',
+      cache: 'no-store',
+      body,
+      signal: controller.signal
+    });
+  } catch (error) {
+    const wrapped = new Error(
+      error?.name === 'AbortError'
+        ? 'The backend took too long to answer.'
+        : 'The connection to the backend was interrupted.'
+    );
+    wrapped.ambiguous = true;
+    wrapped.cause = error;
+    throw wrapped;
+  } finally {
+    window.clearTimeout(timer);
+  }
+
+  if (!response.ok) {
+    const wrapped = new Error(`API request failed (${response.status})`);
+
+    // A gateway/server failure can occur after Apps Script has already accepted
+    // the POST, so retry only with the SAME clientRequestId.
+    wrapped.ambiguous = response.status === 408 ||
+      response.status === 429 ||
+      response.status >= 500;
+
+    throw wrapped;
+  }
+
+  let result;
+  try {
+    result = await response.json();
+  } catch (error) {
+    const wrapped = new Error('Backend returned an unreadable response.');
+    wrapped.ambiguous = true;
+    wrapped.cause = error;
+    throw wrapped;
+  }
+
   if (result && result.success === false && /action tidak valid/i.test(String(result.message || ''))) {
     result.message = `Backend ZAIGEN belum mengenali action "${action}". Deploy ulang Code.gs terbaru: Manage deployments → Edit → New version → Deploy.`;
   }
+
   return result;
 }
 

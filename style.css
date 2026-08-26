@@ -156,6 +156,7 @@ main { width: min(1440px, calc(100% - 40px)); margin: 0 auto; }
   width: 100%;
   height: 100%;
   object-fit: cover;
+  object-position: center 28%;
   display: block;
   border-radius: 12px;
 }
@@ -952,5 +953,381 @@ td { padding: 18px 16px; border-bottom: 1px solid rgba(141,100,30,.11); font-siz
 @media (max-width: 520px) {
   .single-desc-config {
     padding: 13px;
+  }
+}
+
+
+/* =========================================================
+   TELLER WORKSPACE REFINEMENTS
+========================================================= */
+
+/* Sender Account and Sender Name stay on the exact same baseline,
+   even when the sender warning line appears. */
+.bulk-source-fields .bulk-field {
+  grid-template-rows: auto 42px 12px;
+  align-content: start;
+}
+
+.bulk-source-fields .bulk-field .batch-input {
+  height: 42px;
+}
+
+.bulk-warning-placeholder {
+  visibility: hidden;
+}
+
+/* The panel itself already shows the active feature title. */
+.workspace-header {
+  min-height: 68px;
+}
+
+.workspace-header > div {
+  display: flex;
+  align-items: center;
+}
+
+/* Account Directory: account number and holder name open the ledger. */
+.account-ledger-link {
+  appearance: none;
+  border: 0;
+  padding: 0;
+  background: transparent;
+  color: var(--navy-deep);
+  text-align: left;
+  cursor: pointer;
+  font: inherit;
+  transition: color .18s ease;
+}
+
+.account-number-link {
+  font-weight: 800;
+}
+
+.account-name-link {
+  font-weight: 600;
+}
+
+.account-ledger-link:hover,
+.account-ledger-link:focus-visible {
+  color: var(--gold-deep);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  outline: none;
+}
+
+@media (max-width: 780px) {
+  .workspace-header {
+    min-height: 58px;
+  }
+}
+
+
+/* =========================================================
+   LEDGER NAVIGATION + TRANSACTION SEARCH
+========================================================= */
+
+[data-home-logo] {
+  cursor: pointer;
+}
+
+img[data-home-logo]:focus-visible {
+  outline: 2px solid var(--gold);
+  outline-offset: 4px;
+  border-radius: 12px;
+}
+
+.profile-ledger-link,
+.ledger-inline-link {
+  appearance: none;
+  border: 0;
+  padding: 0;
+  margin: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: inherit;
+  cursor: pointer;
+}
+
+.profile-ledger-link:hover,
+.profile-ledger-link:focus-visible,
+.ledger-inline-link:hover,
+.ledger-inline-link:focus-visible {
+  color: var(--gold-deep);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  outline: none;
+}
+
+.identity-copy h2 .profile-ledger-link {
+  font-family: inherit;
+  font-size: inherit;
+  line-height: inherit;
+  font-weight: inherit;
+}
+
+.identity-meta strong .profile-ledger-link {
+  font-weight: 700;
+}
+
+.counterparty-cell .ledger-name-link {
+  font-size: 12px;
+  line-height: 1.25;
+  color: var(--navy-deep);
+  font-weight: 800;
+}
+
+.counterparty-cell .ledger-account-link {
+  justify-self: start;
+  font-size: 9px;
+  line-height: 1.2;
+  color: var(--muted);
+  letter-spacing: .04em;
+}
+
+.report-search {
+  position: relative;
+  width: min(250px, 100%);
+}
+
+.report-search input {
+  width: 100%;
+  min-height: 44px;
+  border: 1px solid var(--line);
+  background: rgba(255,255,255,.76);
+  border-radius: 12px;
+  outline: 0;
+  padding: 10px 44px 10px 12px;
+  color: var(--ink);
+}
+
+.report-search input:focus {
+  border-color: var(--gold);
+  box-shadow: 0 0 0 3px rgba(200,154,67,.12);
+}
+
+.report-search-icon {
+  position: absolute;
+  top: 50%;
+  right: 6px;
+  width: 34px;
+  height: 34px;
+  display: grid;
+  place-items: center;
+  transform: translateY(-50%) rotate(-20deg);
+  border: 0;
+  border-radius: 9px;
+  background: transparent;
+  color: var(--gold-deep);
+  font-size: 20px;
+  line-height: 1;
+}
+
+.report-search-icon:hover,
+.report-search-icon:focus-visible {
+  background: rgba(200,154,67,.10);
+  outline: none;
+}
+
+.report-table {
+  min-width: 900px;
+}
+
+@media (max-width: 780px) {
+  .report-actions .report-search {
+    flex: 1 1 220px;
+  }
+}
+
+@media (max-width: 520px) {
+  .report-search {
+    width: 100%;
+  }
+}
+
+/* Home keeps only the centered hero ledger search.
+   The compact header search appears after a ledger is opened. */
+body.home-view-active .topbar {
+  grid-template-columns: minmax(220px, 1fr) minmax(180px, 1fr);
+}
+
+body.home-view-active .topbar .account-search {
+  display: none;
+}
+
+body.home-view-active .teller-entry {
+  justify-self: end;
+}
+
+.workspace-credit {
+  flex: 0 0 auto;
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 10px 20px 14px;
+  border-top: 1px solid var(--line);
+  background: rgba(250,246,223,.78);
+}
+
+.workspace-credit strong {
+  font-size: 8px;
+  letter-spacing: .16em;
+  color: var(--navy);
+  font-weight: 800;
+}
+
+@media (max-width: 780px) {
+  body.home-view-active .topbar {
+    grid-template-columns: auto 1fr;
+  }
+
+  .workspace-credit {
+    min-height: 40px;
+    padding: 10px 12px 12px;
+  }
+}
+
+/* =========================================================
+   LOGGED-IN TELLER AS INPUT STAFF
+========================================================= */
+
+.process-bar {
+  align-items: center;
+}
+
+.process-staff-identity {
+  min-width: min(330px, 48vw);
+  min-height: 54px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 13px 8px 9px;
+  border: 1px solid rgba(141,100,30,.24);
+  border-radius: 15px;
+  background:
+    linear-gradient(135deg, rgba(255,255,255,.88), rgba(245,239,212,.70));
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.84),
+    0 8px 20px rgba(8,19,26,.05);
+}
+
+.process-staff-seal {
+  flex: 0 0 auto;
+  width: 36px;
+  height: 36px;
+  display: grid;
+  place-items: center;
+  border-radius: 11px;
+  background: linear-gradient(145deg, var(--navy-deep), var(--navy));
+  color: var(--gold-bright);
+  border: 1px solid rgba(243,214,117,.22);
+  box-shadow: 0 8px 18px rgba(8,19,26,.16);
+  font-size: 14px;
+  font-weight: 800;
+}
+
+.process-staff-copy {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: minmax(0,1fr) auto;
+  grid-template-areas:
+    "label id"
+    "name id";
+  align-items: center;
+  column-gap: 14px;
+  row-gap: 2px;
+  flex: 1;
+}
+
+.process-staff-copy > span {
+  grid-area: label;
+  font-size: 8px;
+  line-height: 1.2;
+  text-transform: uppercase;
+  letter-spacing: .13em;
+  color: var(--muted);
+  font-weight: 800;
+}
+
+.process-staff-copy strong {
+  grid-area: name;
+  min-width: 0;
+  color: var(--navy-deep);
+  font-size: 12px;
+  line-height: 1.25;
+  font-weight: 800;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.process-staff-copy small {
+  grid-area: id;
+  align-self: center;
+  padding: 5px 8px;
+  border-radius: 999px;
+  background: rgba(200,154,67,.10);
+  color: var(--gold-deep);
+  border: 1px solid rgba(141,100,30,.16);
+  font-size: 8px;
+  line-height: 1;
+  letter-spacing: .08em;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+/* PROCESS no longer opens the full-screen loading overlay.
+   Only the button itself shows progress, so the teller keeps context. */
+.process-button.is-processing {
+  min-width: 174px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+}
+
+.process-spinner {
+  width: 14px;
+  height: 14px;
+  flex: 0 0 auto;
+  border: 2px solid rgba(255,255,255,.30);
+  border-top-color: var(--gold-bright);
+  border-radius: 50%;
+  animation: processSpin .72s linear infinite;
+}
+
+@keyframes processSpin {
+  to { transform: rotate(360deg); }
+}
+
+@media (max-width: 780px) {
+  .process-staff-identity {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .process-staff-copy {
+    grid-template-columns: minmax(0,1fr) auto;
+  }
+
+  .process-staff-copy strong {
+    max-width: 58vw;
+  }
+}
+
+@media (max-width: 520px) {
+  .process-staff-copy {
+    grid-template-columns: 1fr;
+    grid-template-areas:
+      "label"
+      "name"
+      "id";
+    gap: 3px;
+  }
+
+  .process-staff-copy small {
+    justify-self: start;
+    margin-top: 2px;
   }
 }

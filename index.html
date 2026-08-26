@@ -14,7 +14,7 @@
   <div class="noise"></div>
 
   <header class="topbar">
-    <a href="#" class="brand" aria-label="Zaigen Office home">
+    <a href="#" class="brand" data-home-logo aria-label="Zaigen Office home">
       <img id="bankLogo" class="brand-logo" alt="Bank logo" />
       <div class="brand-copy">
         <span class="brand-kicker">BANKING LEDGER</span>
@@ -46,7 +46,7 @@
         <img src="https://drive.google.com/thumbnail?id=1nOUUMhYVAabhl67WRrYb_8EjqlXt145s&sz=w2400" alt="" />
       </div>
       <div class="welcome-emblem" aria-hidden="true">
-        <img src="https://drive.google.com/thumbnail?id=155EMzz-V3xXlB73YO12TP7hPXA1i1jVN&sz=w1000" alt="" />
+        <img src="https://drive.google.com/thumbnail?id=155EMzz-V3xXlB73YO12TP7hPXA1i1jVN&sz=w1000" data-home-logo alt="Zaigen Office home" role="button" tabindex="0" />
       </div>
       <p class="eyebrow">ZAIGEN OFFICE DATABASE</p>
       <p class="welcome-copy">
@@ -54,7 +54,7 @@
       </p>
       <form id="heroSearchForm" class="hero-search" autocomplete="off">
         <input id="heroSearchInput" type="text" placeholder="ACCOUNT NUMBER" aria-label="Account number" />
-        <button type="submit">OPEN LEDGER</button>
+        <button type="submit">VIEW ACCOUNT</button>
       </form>
       <div class="trust-row">
         <span>Account-based access</span>
@@ -72,12 +72,12 @@
           </div>
           <div class="identity-copy">
             <p class="eyebrow">ACCOUNT HOLDER</p>
-            <h2 id="profileName">—</h2>
+            <h2><button id="profileName" class="profile-ledger-link" type="button" data-open-ledger="">—</button></h2>
             <div id="profileKanji" class="kanji-name">—</div>
             <div class="identity-meta">
               <div>
                 <span>Account Number</span>
-                <strong id="profileAccount">—</strong>
+                <strong><button id="profileAccount" class="profile-ledger-link profile-account-link" type="button" data-open-ledger="">—</button></strong>
               </div>
               <div>
                 <span>X Profile</span>
@@ -153,7 +153,7 @@
     <section class="modal-card auth-card" role="dialog" aria-modal="true" aria-labelledby="tellerLoginTitle">
       <button class="modal-close" type="button" data-close-modal="tellerLoginModal">×</button>
       <div class="auth-emblem">
-        <img id="tellerLoginLogo" alt="Zaigen Office logo" />
+        <img id="tellerLoginLogo" data-home-logo alt="Zaigen Office home" role="button" tabindex="0" />
       </div>
       <p class="eyebrow">AUTHORIZED PERSONNEL</p>
       <h2 id="tellerLoginTitle">Teller Access</h2>
@@ -190,7 +190,7 @@
   <div id="tellerWorkspace" class="workspace-shell is-hidden" aria-hidden="true">
     <aside class="workspace-sidebar">
       <div class="workspace-brand">
-        <img id="workspaceLogo" alt="Bank logo" />
+        <img id="workspaceLogo" data-home-logo alt="Zaigen Office home" role="button" tabindex="0" />
         <div>
           <span>TELLER DESK</span>
           <strong>ZAIGEN OFFICE</strong>
@@ -201,7 +201,7 @@
         <button class="active" data-panel="lastBalancePanel" type="button"><span>01</span> Last Saldo Input</button>
         <button data-panel="transferPanel" type="button"><span>02</span> Personal Transfer</button>
         <button data-panel="salaryPanel" type="button"><span>03</span> Shop & Office Salary</button>
-        <button data-panel="rewardPanel" type="button"><span>04</span> Reward</button>
+        <button data-panel="rewardPanel" type="button"><span>04</span> Rewards</button>
         <button data-panel="reportsPanel" type="button"><span>05</span> Transaction Inputs</button>
         <button data-panel="allAccountsPanel" type="button"><span>06</span> All Accounts</button>
       </nav>
@@ -218,7 +218,6 @@
       <header class="workspace-header">
         <div>
           <p class="eyebrow">AUTHORIZED LEDGER OPERATIONS</p>
-          <h2 id="workspaceTitle">Last Saldo Input</h2>
         </div>
         <button id="closeWorkspaceButton" class="workspace-close" type="button">CLOSE DESK ×</button>
       </header>
@@ -260,10 +259,14 @@
             <small>Adding or changing rows keeps every field you have already filled.</small>
           </div>
           <div class="process-bar">
-            <label class="staff-selector">
-              <span>Input Staff</span>
-              <select id="lastBalanceStaff" class="staff-select"><option value="">Select staff</option></select>
-            </label>
+            <div class="process-staff-identity" aria-label="Input staff">
+              <div class="process-staff-seal" aria-hidden="true">✓</div>
+              <div class="process-staff-copy">
+                <span>INPUT STAFF · SIGNED IN</span>
+                <strong class="process-staff-name">—</strong>
+                <small class="process-staff-id">—</small>
+              </div>
+            </div>
             <button class="process-button" data-process="LAST_SALDO" type="button">PROCESS</button>
           </div>
         </section>
@@ -310,6 +313,7 @@
               <label class="bulk-field">
                 <span>Sender Name</span>
                 <input id="transferBulkSenderName" class="batch-input" type="text" readonly placeholder="Auto-filled" />
+                <small class="bulk-warning bulk-warning-placeholder" aria-hidden="true"></small>
               </label>
             </div>
           </div>
@@ -329,10 +333,14 @@
             <small>Adding or changing rows keeps every field you have already filled.</small>
           </div>
           <div class="process-bar">
-            <label class="staff-selector">
-              <span>Input Staff</span>
-              <select id="transferStaff" class="staff-select"><option value="">Select staff</option></select>
-            </label>
+            <div class="process-staff-identity" aria-label="Input staff">
+              <div class="process-staff-seal" aria-hidden="true">✓</div>
+              <div class="process-staff-copy">
+                <span>INPUT STAFF · SIGNED IN</span>
+                <strong class="process-staff-name">—</strong>
+                <small class="process-staff-id">—</small>
+              </div>
+            </div>
             <button class="process-button" data-process="TRANSFER" type="button">PROCESS</button>
           </div>
         </section>
@@ -394,10 +402,14 @@
             <small>Adding or changing rows keeps every field you have already filled.</small>
           </div>
           <div class="process-bar">
-            <label class="staff-selector">
-              <span>Input Staff</span>
-              <select id="salaryStaff" class="staff-select"><option value="">Select staff</option></select>
-            </label>
+            <div class="process-staff-identity" aria-label="Input staff">
+              <div class="process-staff-seal" aria-hidden="true">✓</div>
+              <div class="process-staff-copy">
+                <span>INPUT STAFF · SIGNED IN</span>
+                <strong class="process-staff-name">—</strong>
+                <small class="process-staff-id">—</small>
+              </div>
+            </div>
             <button class="process-button" data-process="SALARY" type="button">PROCESS</button>
           </div>
         </section>
@@ -405,7 +417,7 @@
         <section id="rewardPanel" class="teller-panel">
           <div class="panel-description">
             <div>
-              <h3>Reward</h3>
+              <h3>Rewards</h3>
               <p>For school events, dormitory events, specific achievements, or class rewards only. Provider accounts are limited to STAFF or OFFICE/SHOP accounts.</p>
             </div>
             <div class="panel-controls">
@@ -459,10 +471,14 @@
             <small>Adding or changing rows keeps every field you have already filled.</small>
           </div>
           <div class="process-bar">
-            <label class="staff-selector">
-              <span>Input Staff</span>
-              <select id="rewardStaff" class="staff-select"><option value="">Select staff</option></select>
-            </label>
+            <div class="process-staff-identity" aria-label="Input staff">
+              <div class="process-staff-seal" aria-hidden="true">✓</div>
+              <div class="process-staff-copy">
+                <span>INPUT STAFF · SIGNED IN</span>
+                <strong class="process-staff-name">—</strong>
+                <small class="process-staff-id">—</small>
+              </div>
+            </div>
             <button class="process-button" data-process="REWARD" type="button">PROCESS</button>
           </div>
         </section>
@@ -476,6 +492,10 @@
             <div class="report-actions">
               <input id="reportMonth" type="month" />
               <button id="loadReportButton" class="secondary-button" type="button">LOAD MONTH</button>
+              <div class="report-search">
+                <input id="reportSearchInput" type="search" placeholder="Transaction ID" autocomplete="off" aria-label="Search transaction ID" />
+                <button id="reportSearchButton" class="report-search-icon" type="button" aria-label="Search transaction ID" title="Search">⌕</button>
+              </div>
               <button id="exportPdfButton" class="secondary-button" type="button">PDF</button>
               <button id="exportPngButton" class="secondary-button" type="button">PNG</button>
             </div>
@@ -572,6 +592,10 @@
           </div>
         </section>
       </div>
+
+      <footer class="workspace-credit">
+        <strong>DEVELOPED BY RYOUMEN SHŌ</strong>
+      </footer>
     </section>
   </div>
 
