@@ -4,7 +4,10 @@ const CONFIG = {
   API_URL: 'https://script.google.com/macros/s/AKfycbyXftSTcUrp1V7wGl2uXa7nplDbKtuSXot-IwoGlViDQoiw8RyzRxbFMIxKSGvi60VH/exec',
   SPREADSHEET_ID: '1B2JX2vPdMMxY8v-ZEkfnSxETpCc5A431qyi15CwLjbg',
   MASTER_SHEET: 'MASTER DATA',
-  STAFF_SHEET: 'STAFF',
+
+  // Teller/staff credentials live in a separate public spreadsheet.
+  STAFF_SPREADSHEET_ID: '1B-4musvQU1r--MpBk0O5wGpB9gGsAtogdTrV3Zb0ENw',
+  STAFF_SHEET: 'LOGIN PASS',
   LOGO_FILE_ID: '155EMzz-V3xXlB73YO12TP7hPXA1i1jVN',
   DEFAULT_ROWS: 5,
   MAX_ROWS: 100,
@@ -280,7 +283,13 @@ async function loadMasterData() {
 }
 
 async function loadStaffDirectory() {
-  const rows = await fetchGvizSheet(CONFIG.STAFF_SHEET, 'select A,B', 1);
+  const rows = await fetchGvizSheet(
+    CONFIG.STAFF_SHEET,
+    'select A,B',
+    1,
+    CONFIG.STAFF_SPREADSHEET_ID
+  );
+
   state.staff = rows
     .map(row => ({ id: cellText(row[0]), name: cellText(row[1]) }))
     .filter(x => x.id && x.name);
@@ -288,7 +297,14 @@ async function loadStaffDirectory() {
 
 async function verifyTellerCredentials(id, password) {
   const escaped = gvizString(id);
-  const rows = await fetchGvizSheet(CONFIG.STAFF_SHEET, `select A,B,E where A = '${escaped}'`, 1);
+
+  const rows = await fetchGvizSheet(
+    CONFIG.STAFF_SHEET,
+    `select A,B,E where A = '${escaped}'`,
+    1,
+    CONFIG.STAFF_SPREADSHEET_ID
+  );
+
   const match = rows
     .map(row => ({ id: cellText(row[0]), name: cellText(row[1]), password: cellText(row[2]) }))
     .find(x => x.id === id);
@@ -297,8 +313,9 @@ async function verifyTellerCredentials(id, password) {
   return { id: match.id, name: match.name };
 }
 
-async function fetchGvizSheet(sheet, query, headers = 1) {
-  const url = `https://docs.google.com/spreadsheets/d/${CONFIG.SPREADSHEET_ID}/gviz/tq?sheet=${encodeURIComponent(sheet)}&headers=${headers}&tqx=out:json&tq=${encodeURIComponent(query)}&_=${Date.now()}`;
+async function fetchGvizSheet(sheet, query, headers = 1, spreadsheetId = CONFIG.SPREADSHEET_ID) {
+  const sourceSpreadsheetId = String(spreadsheetId || CONFIG.SPREADSHEET_ID).trim();
+  const url = `https://docs.google.com/spreadsheets/d/${sourceSpreadsheetId}/gviz/tq?sheet=${encodeURIComponent(sheet)}&headers=${headers}&tqx=out:json&tq=${encodeURIComponent(query)}&_=${Date.now()}`;
   const response = await fetch(url, { redirect: 'follow', cache: 'no-store' });
   if (!response.ok) throw new Error(`Sheet request failed (${response.status})`);
   const text = await response.text();
@@ -977,7 +994,7 @@ async function loginTeller(event) {
   showLoading('Verifying teller access…');
   try {
     const teller = await verifyTellerCredentials(id, password);
-    if (!teller) throw new Error('Teller login rejected. Staff ID or password does not match the STAFF sheet.');
+    if (!teller) throw new Error('Teller login rejected. Staff ID or password does not match the LOGIN PASS sheet.');
 
     state.teller = teller;
     persistTellerSession(teller);
