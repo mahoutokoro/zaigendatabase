@@ -160,6 +160,26 @@
     <strong>DEVELOPED BY RYOUMEN SHŌ</strong>
   </footer>
 
+  <!-- Mobile banking-style navigation. Hidden on desktop. -->
+  <nav id="mobileAppNav" class="mobile-app-nav" aria-label="Mobile navigation">
+    <button class="mobile-app-nav-button active" type="button" data-mobile-action="home" aria-label="Home">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 10.8 12 3l9 7.8v9.1a1.1 1.1 0 0 1-1.1 1.1h-5.2v-6.1H9.3V21H4.1A1.1 1.1 0 0 1 3 19.9Z"/></svg>
+      <span>Home</span>
+    </button>
+    <button class="mobile-app-nav-button" type="button" data-mobile-action="account" aria-label="Account">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4.5 21c.7-4.3 3.2-6.5 7.5-6.5s6.8 2.2 7.5 6.5"/></svg>
+      <span>Account</span>
+    </button>
+    <button class="mobile-app-nav-button" type="button" data-mobile-action="activity" aria-label="Activity">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 18.5V12m5 6.5V7m5 11.5V10m5 8.5V4"/></svg>
+      <span>Activity</span>
+    </button>
+    <button class="mobile-app-nav-button mobile-teller-nav-button" type="button" data-mobile-action="teller" aria-label="Teller">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 8.5h16M6.5 8.5V19m5.5-10.5V19m5.5-10.5V19M3 19h18M5 5l7-3 7 3"/></svg>
+      <span>Teller</span>
+    </button>
+  </nav>
+
   <div id="loadingOverlay" class="loading-overlay is-hidden" role="status" aria-live="polite">
     <div class="loader-seal">両</div>
     <span id="loadingText">Opening ledger…</span>
@@ -217,6 +237,7 @@
         </div>
       </div>
 
+      <div class="teller-nav-swipe-hint" aria-hidden="true"><span>SWIPE FOR MORE</span><b>↔</b></div>
       <nav id="tellerNav" class="teller-nav">
         <button class="active" data-panel="lastBalancePanel" type="button"><span>01</span> Last Saldo Input</button>
         <button data-panel="transferPanel" type="button"><span>02</span> Personal Transfer</button>
@@ -238,9 +259,20 @@
       <header class="workspace-header">
         <div>
           <p class="eyebrow">AUTHORIZED LEDGER OPERATIONS</p>
+          <h2 class="mobile-workspace-title">Teller Desk</h2>
         </div>
         <button id="closeWorkspaceButton" class="workspace-close" type="button">CLOSE DESK ×</button>
       </header>
+
+      <div class="mobile-workspace-user" aria-label="Signed-in teller">
+        <img class="mobile-workspace-avatar mobile-teller-photo" alt="Signed-in teller photo" />
+        <div class="mobile-workspace-user-copy">
+          <span>Signed in teller</span>
+          <strong class="mobile-logged-teller-name">—</strong>
+          <small class="mobile-logged-teller-id">—</small>
+        </div>
+        <button id="mobileTellerLogoutButton" type="button">Log out</button>
+      </div>
 
       <div class="workspace-content">
         <section id="lastBalancePanel" class="teller-panel active">
@@ -280,7 +312,7 @@
           </div>
           <div class="process-bar">
             <div class="process-staff-identity" aria-label="Input staff">
-              <div class="process-staff-seal" aria-hidden="true">✓</div>
+              <img class="process-staff-seal process-staff-photo" alt="Input staff photo" />
               <div class="process-staff-copy">
                 <span>INPUT STAFF · SIGNED IN</span>
                 <strong class="process-staff-name">—</strong>
@@ -354,7 +386,7 @@
           </div>
           <div class="process-bar">
             <div class="process-staff-identity" aria-label="Input staff">
-              <div class="process-staff-seal" aria-hidden="true">✓</div>
+              <img class="process-staff-seal process-staff-photo" alt="Input staff photo" />
               <div class="process-staff-copy">
                 <span>INPUT STAFF · SIGNED IN</span>
                 <strong class="process-staff-name">—</strong>
@@ -369,7 +401,7 @@
           <div class="panel-description">
             <div>
               <h3>Shop & Office Salary / Royalty</h3>
-              <p>For salary and royalty payments by institutions, offices, or shops. Provider accounts are limited to OFFICE/SHOP accounts only.</p>
+              <p>For salary and royalty payments by institutions, offices, or shops. SOURCE accounts are limited to OFFICE/SHOP accounts only.</p>
             </div>
             <div class="panel-controls">
               <div class="mode-control">
@@ -395,13 +427,13 @@
           <div id="salaryBulkBar" class="bulk-config is-hidden" data-bulk-config="SALARY">
             <div class="bulk-config-copy">
               <span>BULK MODE</span>
-              <strong>One provider, multiple recipients</strong>
-              <small>Select the OFFICE/SHOP provider once. Every recipient row will use the same provider.</small>
+              <strong>One SOURCE, multiple recipients</strong>
+              <small>Select the OFFICE/SHOP SOURCE once. Every recipient row will use the same SOURCE.</small>
             </div>
             <label class="bulk-field bulk-provider-field">
-              <span>Provider</span>
+              <span>SOURCE</span>
               <select id="salaryBulkProvider" class="batch-select js-bulk-provider-account" data-bulk-provider-type="SALARY">
-                <option value="">Select provider</option>
+                <option value="">Select SOURCE</option>
               </select>
               <small id="salaryBulkProviderWarning" class="bulk-warning"></small>
             </label>
@@ -423,7 +455,7 @@
           </div>
           <div class="process-bar">
             <div class="process-staff-identity" aria-label="Input staff">
-              <div class="process-staff-seal" aria-hidden="true">✓</div>
+              <img class="process-staff-seal process-staff-photo" alt="Input staff photo" />
               <div class="process-staff-copy">
                 <span>INPUT STAFF · SIGNED IN</span>
                 <strong class="process-staff-name">—</strong>
@@ -438,7 +470,7 @@
           <div class="panel-description">
             <div>
               <h3>Rewards</h3>
-              <p>For school events, dormitory events, specific achievements, or class rewards only. Provider accounts are limited to STAFF or OFFICE/SHOP accounts.</p>
+              <p>For school events, dormitory events, specific achievements, or class rewards only. SOURCE accounts are limited to STAFF or OFFICE/SHOP accounts.</p>
             </div>
             <div class="panel-controls">
               <div class="mode-control">
@@ -464,13 +496,13 @@
           <div id="rewardBulkBar" class="bulk-config is-hidden" data-bulk-config="REWARD">
             <div class="bulk-config-copy">
               <span>BULK MODE</span>
-              <strong>One provider, multiple recipients</strong>
-              <small>Select the STAFF or OFFICE/SHOP provider once. Every recipient row will use the same provider.</small>
+              <strong>One SOURCE, multiple recipients</strong>
+              <small>Select the STAFF or OFFICE/SHOP SOURCE once. Every recipient row will use the same SOURCE.</small>
             </div>
             <label class="bulk-field bulk-provider-field">
-              <span>Provider</span>
+              <span>SOURCE</span>
               <select id="rewardBulkProvider" class="batch-select js-bulk-provider-account" data-bulk-provider-type="REWARD">
-                <option value="">Select provider</option>
+                <option value="">Select SOURCE</option>
               </select>
               <small id="rewardBulkProviderWarning" class="bulk-warning"></small>
             </label>
@@ -492,7 +524,7 @@
           </div>
           <div class="process-bar">
             <div class="process-staff-identity" aria-label="Input staff">
-              <div class="process-staff-seal" aria-hidden="true">✓</div>
+              <img class="process-staff-seal process-staff-photo" alt="Input staff photo" />
               <div class="process-staff-copy">
                 <span>INPUT STAFF · SIGNED IN</span>
                 <strong class="process-staff-name">—</strong>
@@ -534,10 +566,10 @@
                 <thead>
                   <tr>
                     <th>Date</th>
-                    <th>Account</th>
-                    <th>Name</th>
+                    <th>Transaction</th>
+                    <th>Sender / Source</th>
+                    <th>Recipient</th>
                     <th>Description</th>
-                    <th>Staff</th>
                     <th>Amount</th>
                     <th class="report-action-col">Action</th>
                   </tr>
@@ -626,7 +658,8 @@
       <button class="modal-close" type="button" data-close-modal="editTransactionModal">×</button>
       <p class="eyebrow">REVISION WINDOW</p>
       <h2 id="editTransactionTitle">Edit Transaction</h2>
-      <p class="modal-intro">Transactions can only be revised within one month of creation.</p>
+      <p class="modal-intro">Transactions can only be revised within one month of creation. Paired sender/recipient log rows are revised together from this window.</p>
+      <div id="editTransactionRoute" class="edit-transaction-route" aria-live="polite"></div>
       <form id="editTransactionForm" class="stack-form">
         <input id="editTransactionId" type="hidden" />
         <label>

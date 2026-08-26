@@ -53,6 +53,12 @@ const state = {
     SALARY: 'MULTI',
     REWARD: 'MULTI'
   },
+  amountModes: {
+    LAST_SALDO: 'MULTI',
+    TRANSFER: 'MULTI',
+    SALARY: 'MULTI',
+    REWARD: 'MULTI'
+  },
   processingTypes: new Set()
 };
 
@@ -64,7 +70,11 @@ const els = {};
 document.addEventListener('DOMContentLoaded', async () => {
   cacheElements();
   setBrandAssets();
+  installAmountModeControls();
+  installCompactDateControls();
+  installBatchUtilityControls();
   document.body.classList.add('home-view-active');
+  updateMobilePublicNavigation('home');
   updateTellerSessionUi();
   bindGlobalEvents();
   initializeRowControls();
@@ -72,6 +82,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   renderAllBatchGrids();
   ['TRANSFER','SALARY','REWARD'].forEach(applyBatchModeVisuals);
   ['LAST_SALDO','TRANSFER','SALARY','REWARD'].forEach(applyDescriptionModeVisuals);
+  ['LAST_SALDO','TRANSFER','SALARY','REWARD'].forEach(applyAmountModeVisuals);
 
   try {
     await Promise.all([loadMasterData(), loadStaffDirectory()]);
@@ -99,7 +110,8 @@ function cacheElements() {
     'reportMonthLabel','reportTableBody','reportEmpty','reportDocument','editTransactionModal','editTransactionForm',
     'editTransactionId','editTransactionDate','editTransactionAmount','editTransactionDescription','editTransactionStaff',
     'bankLogo','workspaceLogo','tellerLoginLogo','tellerPasswordToggle','allAccountSearch','allAccountStatusFilter','allAccountTableBody',
-    'allAccountTotal','allAccountBalance','allAccountActive','allAccountFrozen','allAccountCountLabel'
+    'allAccountTotal','allAccountBalance','allAccountActive','allAccountFrozen','allAccountCountLabel',
+    'mobileAppNav','mobileTellerLogoutButton'
   ].forEach(id => els[id] = document.getElementById(id));
 }
 
@@ -108,6 +120,101 @@ function setBrandAssets() {
   els.bankLogo.src = logo;
   els.workspaceLogo.src = logo;
   if (els.tellerLoginLogo) els.tellerLoginLogo.src = logo;
+}
+
+function installAmountModeControls() {
+  const configs = {
+    LAST_SALDO: { panelId: 'lastBalancePanel', inputId: 'lastBalanceSingleAmount' },
+    TRANSFER: { panelId: 'transferPanel', inputId: 'transferSingleAmount' },
+    SALARY: { panelId: 'salaryPanel', inputId: 'salarySingleAmount' },
+    REWARD: { panelId: 'rewardPanel', inputId: 'rewardSingleAmount' }
+  };
+
+  Object.entries(configs).forEach(([type, config]) => {
+    const panel = document.getElementById(config.panelId);
+    const controls = $('.panel-controls', panel);
+    const grid = document.getElementById(batchConfig(type).gridId);
+    if (!panel || !controls || !grid) return;
+
+    if (!$(`[data-amount-type="${type}"]`, controls)) {
+      const amountControl = document.createElement('div');
+      amountControl.className = 'amount-mode-control';
+      amountControl.innerHTML = `
+        <span>Amount</span>
+        <div class="mode-switch" role="group" aria-label="Amount mode">
+          <button class="mode-option" data-amount-type="${type}" data-amount-mode="SINGLE" type="button">SINGLE AMOUNT</button>
+          <button class="mode-option active" data-amount-type="${type}" data-amount-mode="MULTI" type="button">MULTI AMOUNT</button>
+        </div>`;
+
+      const rowControl = $('.row-count-control', controls);
+      if (rowControl) controls.insertBefore(amountControl, rowControl);
+      else controls.appendChild(amountControl);
+    }
+
+    if (!$(`[data-single-amount-config="${type}"]`, panel)) {
+      const sharedBar = document.createElement('div');
+      sharedBar.className = 'single-amount-config is-hidden';
+      sharedBar.dataset.singleAmountConfig = type;
+      sharedBar.innerHTML = `
+        <div class="single-amount-copy">
+          <span>SINGLE AMOUNT</span>
+          <small>Use one amount for every active recipient row.</small>
+        </div>
+        <label class="single-amount-field">
+          <span>Amount</span>
+          <div class="currency-input single-amount-input-wrap">
+            <span>${CONFIG.CURRENCY}</span>
+            <input id="${config.inputId}" class="js-single-amount" data-amount-type="${type}" type="text" inputmode="numeric" placeholder="0" />
+          </div>
+        </label>`;
+      grid.insertAdjacentElement('beforebegin', sharedBar);
+    }
+  });
+}
+
+function installCompactDateControls() {
+  const configs = {
+    TRANSFER: { panelId: 'transferPanel', inputId: 'transferCompactDate' },
+    SALARY: { panelId: 'salaryPanel', inputId: 'salaryCompactDate' },
+    REWARD: { panelId: 'rewardPanel', inputId: 'rewardCompactDate' }
+  };
+
+  Object.entries(configs).forEach(([type, config]) => {
+    const panel = document.getElementById(config.panelId);
+    const grid = document.getElementById(batchConfig(type).gridId);
+    if (!panel || !grid || $(`[data-compact-date-config="${type}"]`, panel)) return;
+
+    const sharedDate = document.createElement('div');
+    sharedDate.className = 'compact-date-config is-hidden';
+    sharedDate.dataset.compactDateConfig = type;
+    sharedDate.innerHTML = `
+      <div class="compact-date-copy">
+        <span>SHARED DATE</span>
+        <small>All recipients in this compact batch use the same transaction date.</small>
+      </div>
+      <label class="compact-date-field">
+        <span>Date</span>
+        <input id="${config.inputId}" class="batch-input js-compact-shared-date" data-compact-date-type="${type}" type="date" value="${dateInputValue(new Date())}" />
+      </label>`;
+
+    grid.insertAdjacentElement('beforebegin', sharedDate);
+  });
+}
+
+function installBatchUtilityControls() {
+  $$('.batch-row-actions').forEach(actions => {
+    const addButton = $('[data-add-row]', actions);
+    const type = addButton?.dataset.addRow;
+    if (!type || $('[data-clear-all]', actions)) return;
+
+    const utilityGroup = document.createElement('div');
+    utilityGroup.className = 'batch-utility-actions';
+    utilityGroup.innerHTML = `
+      <button class="clear-all-button" data-clear-all="${type}" type="button">CLEAR ALL DATA</button>
+      <button class="remove-row-button" data-remove-row="${type}" type="button"><span aria-hidden="true">−</span> REMOVE ROW</button>`;
+
+    addButton.insertAdjacentElement('afterend', utilityGroup);
+  });
 }
 
 function bindGlobalEvents() {
@@ -167,6 +274,14 @@ function bindGlobalEvents() {
       openModal('tellerLoginModal');
     }
   });
+
+  if (els.mobileAppNav) {
+    els.mobileAppNav.addEventListener('click', handleMobileAppNavigation);
+  }
+
+  if (els.mobileTellerLogoutButton) {
+    els.mobileTellerLogoutButton.addEventListener('click', logoutTeller);
+  }
   els.tellerLoginForm.addEventListener('submit', loginTeller);
   if (els.tellerPasswordToggle) {
     els.tellerPasswordToggle.addEventListener('click', toggleTellerPasswordVisibility);
@@ -199,6 +314,30 @@ function bindGlobalEvents() {
 
   $$('[data-desc-type][data-desc-mode]').forEach(button => {
     button.addEventListener('click', () => setDescriptionMode(button.dataset.descType, button.dataset.descMode));
+  });
+
+  $$('[data-amount-type][data-amount-mode]').forEach(button => {
+    button.addEventListener('click', () => setAmountMode(button.dataset.amountType, button.dataset.amountMode));
+  });
+
+  $$('.js-single-amount').forEach(input => {
+    input.addEventListener('input', formatMoneyInput);
+  });
+
+  $$('.js-compact-shared-date').forEach(input => {
+    input.addEventListener('change', () => {
+      const type = input.dataset.compactDateType;
+      syncCompactDateToRows(type);
+      clearPendingBatchRequest(type);
+    });
+  });
+
+  $$('[data-clear-all]').forEach(button => {
+    button.addEventListener('click', () => clearAllBatchData(button.dataset.clearAll));
+  });
+
+  $$('[data-remove-row]').forEach(button => {
+    button.addEventListener('click', () => removeLastBatchRow(button.dataset.removeRow));
   });
 
   const bulkSender = $('.js-bulk-sender-account');
@@ -374,7 +513,7 @@ function refreshProviderSelectOptions() {
       ? state.providersOffice
       : state.providersReward;
 
-    select.innerHTML = '<option value="">Select provider</option>' + providers
+    select.innerHTML = '<option value="">Select SOURCE</option>' + providers
       .map(item => `<option value="${escapeAttr(item.account)}">${escapeHtml(item.account)} — ${escapeHtml(item.name)}</option>`)
       .join('');
 
@@ -390,7 +529,7 @@ function refreshBulkProviderOptions() {
     const current = select.value;
     const providers = type === 'SALARY' ? state.providersOffice : state.providersReward;
 
-    select.innerHTML = '<option value="">Select provider</option>' + providers
+    select.innerHTML = '<option value="">Select SOURCE</option>' + providers
       .map(item => `<option value="${escapeAttr(item.account)}">${escapeHtml(item.account)} — ${escapeHtml(item.name)}</option>`)
       .join('');
 
@@ -578,8 +717,23 @@ function renderAllAccounts() {
         <td><span class="directory-status ${frozenAccount ? 'frozen' : ''}">${escapeHtml(item.status || '—')}</span></td>
         <td>${xUrl ? `<a href="${escapeAttr(xUrl)}" target="_blank" rel="noopener noreferrer">@${escapeHtml(xLabel)}</a>` : '—'}</td>
         <td class="money-col"><strong>${escapeHtml(formatCurrency(item.balance))}</strong></td>
+        <td class="account-photo-cell">
+          <img
+            class="account-directory-photo"
+            src="${escapeAttr(normalizeImageUrl(item.photo) || fallbackAvatar(item.name))}"
+            data-account-photo-name="${escapeAttr(item.name || 'Account holder')}"
+            alt="${escapeAttr(item.name || 'Account holder')}"
+            loading="lazy"
+          />
+        </td>
       </tr>`;
   }).join('');
+
+  $$('.account-directory-photo', els.allAccountTableBody).forEach(image => {
+    image.addEventListener('error', () => {
+      image.src = fallbackAvatar(image.dataset.accountPhotoName || 'Account holder');
+    }, { once: true });
+  });
 }
 
 function handleLedgerNavigationClick(event) {
@@ -621,8 +775,68 @@ function goToHome() {
   document.body.classList.add('home-view-active');
   els.headerSearchInput.value = '';
   els.heroSearchInput.value = '';
+  updateMobilePublicNavigation('home');
 
   window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function handleMobileAppNavigation(event) {
+  const button = event.target.closest('[data-mobile-action]');
+  if (!button) return;
+
+  const action = button.dataset.mobileAction;
+
+  if (action === 'home') {
+    goToHome();
+    return;
+  }
+
+  if (action === 'account') {
+    if (state.currentAccount && !els.accountView.classList.contains('is-hidden')) {
+      updateMobilePublicNavigation('account');
+      document.querySelector('.account-hero')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      return;
+    }
+
+    updateMobilePublicNavigation('account');
+    const target = document.body.classList.contains('home-view-active')
+      ? els.heroSearchInput
+      : els.headerSearchInput;
+    target?.focus({ preventScroll: false });
+    target?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    return;
+  }
+
+  if (action === 'activity') {
+    if (state.currentAccount && !els.accountView.classList.contains('is-hidden')) {
+      updateMobilePublicNavigation('activity');
+      document.querySelector('.ledger-section')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    } else {
+      updateMobilePublicNavigation('account');
+      els.heroSearchInput?.focus({ preventScroll: false });
+      els.heroSearchInput?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+    return;
+  }
+
+  if (action === 'teller') {
+    updateMobilePublicNavigation('teller');
+    if (state.teller) {
+      openTellerWorkspace();
+    } else {
+      openModal('tellerLoginModal');
+    }
+  }
+}
+
+function updateMobilePublicNavigation(activeAction) {
+  if (!els.mobileAppNav) return;
+
+  $$('[data-mobile-action]', els.mobileAppNav).forEach(button => {
+    const isActive = button.dataset.mobileAction === activeAction;
+    button.classList.toggle('active', isActive);
+    button.setAttribute('aria-current', isActive ? 'page' : 'false');
+  });
 }
 
 function cleanXUsername(value) {
@@ -681,6 +895,7 @@ async function searchAccount(rawAccount, silent = false) {
   els.welcomeView.classList.add('is-hidden');
   els.accountView.classList.remove('is-hidden');
   document.body.classList.remove('home-view-active');
+  updateMobilePublicNavigation('account');
   els.headerSearchInput.value = account;
   els.heroSearchInput.value = account;
 
@@ -925,6 +1140,7 @@ function renderTransactions(rows) {
     const amount = parseMoney(row.log);
     const counterparty = transactionCounterpartyHtml(row, amount);
     const tr = document.createElement('tr');
+    tr.className = amount < 0 ? 'transaction-debit' : amount > 0 ? 'transaction-credit' : 'transaction-entry';
     tr.innerHTML = `
       <td>${escapeHtml(formatDateDisplay(row.date || row.transactionDate || ''))}</td>
       <td><span class="log-pill">${escapeHtml(transactionLabel(amount))}</span></td>
@@ -1112,19 +1328,55 @@ function updateTellerSessionUi() {
   $$('.process-staff-id').forEach(element => {
     element.textContent = loggedIn ? state.teller.id : '—';
   });
+
+  $$('.mobile-logged-teller-name').forEach(element => {
+    element.textContent = loggedIn ? state.teller.name : '—';
+  });
+
+  $$('.mobile-logged-teller-id').forEach(element => {
+    element.textContent = loggedIn ? state.teller.id : '—';
+  });
+
+  const staffPhoto = loggedIn
+    ? getTellerPhotoUrl(state.teller)
+    : fallbackAvatar('Staff');
+
+  $$('.mobile-teller-photo, .process-staff-photo').forEach(image => {
+    image.src = staffPhoto;
+    image.alt = loggedIn ? `${state.teller.name} photo` : 'Staff photo';
+    image.onerror = () => {
+      image.onerror = null;
+      image.src = fallbackAvatar(loggedIn ? state.teller.name : 'Staff');
+    };
+  });
+}
+
+function getTellerPhotoUrl(teller) {
+  if (!teller) return fallbackAvatar('Staff');
+
+  const byAccount = state.masterMap.get(normalizeAccount(teller.id));
+  const byName = state.master.find(item =>
+    String(item.name || '').trim().toLowerCase() === String(teller.name || '').trim().toLowerCase()
+  );
+  const record = byAccount || byName;
+  return normalizeImageUrl(record?.photo) || fallbackAvatar(teller.name || 'Staff');
 }
 
 function openTellerWorkspace() {
   if (!state.teller) return;
   els.tellerWorkspace.classList.remove('is-hidden');
   els.tellerWorkspace.setAttribute('aria-hidden', 'false');
+  document.body.classList.add('teller-workspace-open');
   document.body.style.overflow = 'hidden';
+  updateMobilePublicNavigation('teller');
 }
 
 function closeTellerWorkspace() {
   els.tellerWorkspace.classList.add('is-hidden');
   els.tellerWorkspace.setAttribute('aria-hidden', 'true');
+  document.body.classList.remove('teller-workspace-open');
   document.body.style.overflow = '';
+  updateMobilePublicNavigation(state.currentAccount ? 'account' : 'home');
 }
 
 function switchTellerPanel(panelId, button) {
@@ -1134,6 +1386,11 @@ function switchTellerPanel(panelId, button) {
   if (panelId === 'reportsPanel') loadMonthlyReport();
   if (panelId === 'allAccountsPanel') {
     refreshSharedData().then(renderAllAccounts);
+  }
+
+  if (window.matchMedia('(max-width: 780px)').matches) {
+    const content = $('.workspace-content');
+    if (content) content.scrollTo({ top: 0, behavior: 'smooth' });
   }
 }
 
@@ -1225,6 +1482,8 @@ function appendBatchRow(type) {
   bindBatchRowEvents(row, type);
   applyBatchModeVisuals(type);
   applyDescriptionModeVisuals(type);
+  applyAmountModeVisuals(type);
+  applyCompactRecipientMode(type);
   return row;
 }
 
@@ -1269,7 +1528,11 @@ function resetBatchRows(type, count) {
   const input = document.getElementById(rowInputIdForType(type));
   if (input) input.value = String(target);
   resetSingleDescription(type);
+  resetSingleAmount(type);
+  resetCompactSharedDate(type);
   applyDescriptionModeVisuals(type);
+  applyAmountModeVisuals(type);
+  applyCompactRecipientMode(type);
 }
 
 function setBatchMode(type, mode) {
@@ -1298,6 +1561,7 @@ function applyBatchModeVisuals(type) {
 
   const bulkBar = $(`[data-bulk-config="${type}"]`);
   if (bulkBar) bulkBar.classList.toggle('is-hidden', mode !== 'BULK');
+  applyCompactRecipientMode(type);
 }
 
 function isBulkMode(type) {
@@ -1334,6 +1598,7 @@ function applyDescriptionModeVisuals(type) {
 
   const singleBar = $(`[data-single-desc-config="${type}"]`);
   if (singleBar) singleBar.classList.toggle('is-hidden', mode !== 'SINGLE');
+  applyCompactRecipientMode(type);
 }
 
 function isSingleDescriptionMode(type) {
@@ -1381,6 +1646,153 @@ function resetSingleDescription(type) {
   const input = singleDescriptionInputForType(type);
   if (!input) return;
   input.value = type === 'LAST_SALDO' ? 'Saldo akhir' : '';
+}
+
+function setAmountMode(type, mode) {
+  mode = mode === 'SINGLE' ? 'SINGLE' : 'MULTI';
+  const previous = state.amountModes[type] || 'MULTI';
+
+  if (mode === 'SINGLE' && previous !== 'SINGLE') {
+    seedSingleAmountFromRows(type);
+  }
+
+  state.amountModes[type] = mode;
+  applyAmountModeVisuals(type);
+}
+
+function applyAmountModeVisuals(type) {
+  const config = batchConfig(type);
+  const panel = document.getElementById(config?.panelId);
+  if (!panel) return;
+
+  const mode = state.amountModes[type] || 'MULTI';
+  panel.classList.toggle('single-amount-mode', mode === 'SINGLE');
+
+  $$(`[data-amount-type="${type}"][data-amount-mode]`).forEach(button => {
+    button.classList.toggle('active', button.dataset.amountMode === mode);
+  });
+
+  const singleBar = $(`[data-single-amount-config="${type}"]`);
+  if (singleBar) singleBar.classList.toggle('is-hidden', mode !== 'SINGLE');
+  applyCompactRecipientMode(type);
+}
+
+function isSingleAmountMode(type) {
+  return state.amountModes[type] === 'SINGLE';
+}
+
+function singleAmountInputForType(type) {
+  const id = {
+    LAST_SALDO: 'lastBalanceSingleAmount',
+    TRANSFER: 'transferSingleAmount',
+    SALARY: 'salarySingleAmount',
+    REWARD: 'rewardSingleAmount'
+  }[type];
+
+  return id ? document.getElementById(id) : null;
+}
+
+function getSingleAmountRaw(type) {
+  const input = singleAmountInputForType(type);
+  if (!input) return '';
+  return input.dataset.rawValue || input.value.replace(/[^0-9]/g, '');
+}
+
+function seedSingleAmountFromRows(type) {
+  const input = singleAmountInputForType(type);
+  if (!input || getSingleAmountRaw(type)) return;
+
+  const config = batchConfig(type);
+  const container = document.getElementById(config.gridId);
+  if (!container) return;
+
+  const firstAmountInput = $$('.js-amount', container).find(amountInput => {
+    const raw = amountInput.dataset.rawValue || amountInput.value.replace(/[^0-9]/g, '');
+    return Boolean(raw);
+  });
+
+  if (!firstAmountInput) return;
+  const raw = firstAmountInput.dataset.rawValue || firstAmountInput.value.replace(/[^0-9]/g, '');
+  input.dataset.rawValue = raw;
+  input.value = Number(raw).toLocaleString('en-US');
+}
+
+function resetSingleAmount(type) {
+  const input = singleAmountInputForType(type);
+  if (!input) return;
+  input.value = '';
+  delete input.dataset.rawValue;
+}
+
+function isCompactRecipientMode(type) {
+  return ['TRANSFER', 'SALARY', 'REWARD'].includes(type) &&
+    isBulkMode(type) &&
+    isSingleDescriptionMode(type) &&
+    isSingleAmountMode(type);
+}
+
+function compactDateInputForType(type) {
+  const id = {
+    TRANSFER: 'transferCompactDate',
+    SALARY: 'salaryCompactDate',
+    REWARD: 'rewardCompactDate'
+  }[type];
+  return id ? document.getElementById(id) : null;
+}
+
+function getCompactSharedDate(type) {
+  const input = compactDateInputForType(type);
+  return input?.value || '';
+}
+
+function seedCompactDateFromRows(type) {
+  const input = compactDateInputForType(type);
+  if (!input) return;
+
+  const config = batchConfig(type);
+  const container = document.getElementById(config?.gridId);
+  const firstDate = container
+    ? $$('.js-date', container).map(dateInput => dateInput.value).find(Boolean)
+    : '';
+
+  input.value = firstDate || dateInputValue(new Date());
+}
+
+function syncCompactDateToRows(type) {
+  const input = compactDateInputForType(type);
+  const config = batchConfig(type);
+  const container = document.getElementById(config?.gridId);
+  if (!input || !container) return;
+
+  const date = input.value || dateInputValue(new Date());
+  input.value = date;
+  $$('.js-date', container).forEach(dateInput => {
+    dateInput.value = date;
+  });
+}
+
+function resetCompactSharedDate(type) {
+  const input = compactDateInputForType(type);
+  if (!input) return;
+  input.value = dateInputValue(new Date());
+}
+
+function applyCompactRecipientMode(type) {
+  const config = batchConfig(type);
+  const panel = document.getElementById(config?.panelId);
+  if (!panel) return;
+
+  const compact = isCompactRecipientMode(type);
+  const wasCompact = panel.classList.contains('compact-recipient-mode');
+  panel.classList.toggle('compact-recipient-mode', compact);
+
+  const dateBar = $(`[data-compact-date-config="${type}"]`, panel);
+  if (dateBar) dateBar.classList.toggle('is-hidden', !compact);
+
+  if (compact) {
+    if (!wasCompact || !getCompactSharedDate(type)) seedCompactDateFromRows(type);
+    syncCompactDateToRows(type);
+  }
 }
 
 function seedBulkSourceFromRows(type) {
@@ -1466,7 +1878,7 @@ function validateBulkProvider(type) {
 
   const record = state.masterMap.get(normalizeAccount(select.value));
   if (!record) {
-    warning.textContent = 'Provider account not found';
+    warning.textContent = 'SOURCE account not found';
     return;
   }
   if (isFrozenStatus(record.status)) warning.textContent = 'FROZEN — transactions are prohibited';
@@ -1483,17 +1895,21 @@ function batchConfig(type) {
 
 function buildBatchRowHtml(type, number) {
   const today = dateInputValue(new Date());
-  const index = `<div class="batch-index">${String(number).padStart(2, '0')}</div>`;
-  const date = fieldHtml('Date', `<input class="batch-input js-date" type="date" value="${today}">`);
-  const amount = fieldHtml('Amount', `<div class="currency-input"><span>${CONFIG.CURRENCY}</span><input class="js-amount" type="text" inputmode="numeric" placeholder="0"></div>`);
+  const index = `
+    <div class="batch-row-leading">
+      <div class="batch-index">${String(number).padStart(2, '0')}</div>
+      <button class="row-clear-button" type="button" title="Clear this row">CLEAR</button>
+    </div>`;
+  const date = fieldHtml('Date', `<input class="batch-input js-date" type="date" value="${today}">`, 'date-field');
+  const amount = fieldHtml('Amount', `<div class="currency-input"><span>${CONFIG.CURRENCY}</span><input class="js-amount" type="text" inputmode="numeric" placeholder="0"></div>`, 'amount-field');
   const description = fieldHtml('Description', `<input class="batch-input js-description" type="text" placeholder="Required">`, 'description-field');
 
   if (type === 'LAST_SALDO') {
     return [
       index,
       date,
-      accountFieldHtml('Recipient account', 'js-recipient-account'),
-      readonlyNameFieldHtml('Recipient name', 'js-recipient-name'),
+      accountFieldHtml('Recipient account', 'js-recipient-account', 'recipient-account-field'),
+      readonlyNameFieldHtml('Recipient name', 'js-recipient-name', 'recipient-name-field'),
       amount,
       fieldHtml('Description', `<input class="batch-input js-description" type="text" value="Saldo akhir" placeholder="Required">`, 'description-field')
     ].join('');
@@ -1505,24 +1921,24 @@ function buildBatchRowHtml(type, number) {
       date,
       accountFieldHtml('Sender account', 'js-sender-account', 'bulk-source-field'),
       readonlyNameFieldHtml('Sender name', 'js-sender-name', 'bulk-source-field'),
-      accountFieldHtml('Recipient account', 'js-recipient-account'),
-      readonlyNameFieldHtml('Recipient name', 'js-recipient-name'),
+      accountFieldHtml('Recipient account', 'js-recipient-account', 'recipient-account-field'),
+      readonlyNameFieldHtml('Recipient name', 'js-recipient-name', 'recipient-name-field'),
       amount,
       description
     ].join('');
   }
 
   const providers = type === 'SALARY' ? state.providersOffice : state.providersReward;
-  const providerOptions = ['<option value="">Select provider</option>']
+  const providerOptions = ['<option value="">Select SOURCE</option>']
     .concat(providers.map(item => `<option value="${escapeAttr(item.account)}">${escapeHtml(item.account)} — ${escapeHtml(item.name)}</option>`))
     .join('');
 
   return [
     index,
     date,
-    fieldHtml('Provider', `<select class="batch-select js-provider-account">${providerOptions}</select>`, 'bulk-source-field'),
-    accountFieldHtml('Recipient account', 'js-recipient-account'),
-    readonlyNameFieldHtml('Recipient name', 'js-recipient-name'),
+    fieldHtml('SOURCE', `<select class="batch-select js-provider-account">${providerOptions}</select>`, 'bulk-source-field'),
+    accountFieldHtml('Recipient account', 'js-recipient-account', 'recipient-account-field'),
+    readonlyNameFieldHtml('Recipient name', 'js-recipient-name', 'recipient-name-field'),
     amount,
     description
   ].join('');
@@ -1543,6 +1959,11 @@ function readonlyNameFieldHtml(label, className, extraClass = '') {
 function bindBatchRowEvents(row, type) {
   $$('.js-amount', row).forEach(input => input.addEventListener('input', formatMoneyInput));
 
+  const clearButton = $('.row-clear-button', row);
+  if (clearButton) {
+    clearButton.addEventListener('click', () => clearBatchRow(type, row));
+  }
+
   $$('.js-sender-account, .js-recipient-account', row).forEach(input => {
     input.addEventListener('input', () => resolveBatchAccount(row, input, type));
     input.addEventListener('blur', () => resolveBatchAccount(row, input, type));
@@ -1556,6 +1977,100 @@ function bindBatchRowEvents(row, type) {
 
   const provider = $('.js-provider-account', row);
   if (provider) provider.addEventListener('change', () => validateWholeBatchRow(row, type));
+}
+
+function clearBatchRow(type, row, showFeedback = true) {
+  if (!row) return;
+
+  const date = $('.js-date', row);
+  if (date) date.value = isCompactRecipientMode(type)
+    ? (getCompactSharedDate(type) || dateInputValue(new Date()))
+    : dateInputValue(new Date());
+
+  $$('.js-sender-account, .js-recipient-account', row).forEach(input => {
+    input.value = '';
+  });
+  $$('.js-sender-name, .js-recipient-name', row).forEach(input => {
+    input.value = '';
+  });
+
+  const provider = $('.js-provider-account', row);
+  if (provider) provider.value = '';
+
+  const amount = $('.js-amount', row);
+  if (amount) {
+    amount.value = '';
+    delete amount.dataset.rawValue;
+  }
+
+  const description = $('.js-description', row);
+  if (description) description.value = type === 'LAST_SALDO' ? 'Saldo akhir' : '';
+
+  $$('.account-warning', row).forEach(warning => { warning.textContent = ''; });
+  row.classList.remove('frozen');
+  clearPendingBatchRequest(type);
+
+  if (showFeedback) toast('Row data cleared.');
+}
+
+function clearAllBatchData(type) {
+  const config = batchConfig(type);
+  const container = document.getElementById(config?.gridId);
+  if (!container) return;
+
+  const ok = window.confirm('Clear all entered data in this transaction form? The current row count will be kept.');
+  if (!ok) return;
+
+  $$('.batch-row', container).forEach(row => clearBatchRow(type, row, false));
+
+  if (type === 'TRANSFER') {
+    const sender = $('#transferBulkSender');
+    const senderName = $('#transferBulkSenderName');
+    const warning = $('#transferBulkSenderWarning');
+    if (sender) sender.value = '';
+    if (senderName) senderName.value = '';
+    if (warning) warning.textContent = '';
+  }
+
+  if (type === 'SALARY' || type === 'REWARD') {
+    const select = document.getElementById(type === 'SALARY' ? 'salaryBulkProvider' : 'rewardBulkProvider');
+    const warning = document.getElementById(type === 'SALARY' ? 'salaryBulkProviderWarning' : 'rewardBulkProviderWarning');
+    if (select) select.value = '';
+    if (warning) warning.textContent = '';
+  }
+
+  resetSingleDescription(type);
+  resetSingleAmount(type);
+  resetCompactSharedDate(type);
+  syncCompactDateToRows(type);
+  clearPendingBatchRequest(type);
+  toast('All entered data cleared.', 'success');
+}
+
+function removeLastBatchRow(type) {
+  const config = batchConfig(type);
+  const container = document.getElementById(config?.gridId);
+  if (!container) return;
+
+  const rows = $$('.batch-row', container);
+  if (rows.length <= 1) {
+    toast('At least one transaction row must remain.', 'error');
+    return;
+  }
+
+  const lastRow = rows[rows.length - 1];
+  if (!isBatchRowPristine(type, lastRow)) {
+    const ok = window.confirm('The last row contains data. Remove this row anyway?');
+    if (!ok) return;
+  }
+
+  lastRow.remove();
+  renumberBatchRows(type);
+  const count = $$('.batch-row', container).length;
+  const input = document.getElementById(rowInputIdForType(type));
+  if (input) input.value = String(count);
+  clearPendingBatchRequest(type);
+  toast('Last row removed.');
 }
 
 /**
@@ -2132,8 +2647,13 @@ function delay(ms) {
 }
 
 function extractBatchRow(type, row) {
-  const date = $('.js-date', row)?.value || '';
-  const amountRaw = $('.js-amount', row)?.dataset.rawValue || $('.js-amount', row)?.value.replace(/,/g, '') || '';
+  const compactRecipientMode = isCompactRecipientMode(type);
+  const date = compactRecipientMode
+    ? getCompactSharedDate(type)
+    : ($('.js-date', row)?.value || '');
+  const rowAmountRaw = $('.js-amount', row)?.dataset.rawValue || $('.js-amount', row)?.value.replace(/,/g, '') || '';
+  const singleAmount = isSingleAmountMode(type);
+  const amountRaw = singleAmount ? getSingleAmountRaw(type) : rowAmountRaw;
   const amount = Number(amountRaw);
   const rowDescription = $('.js-description', row)?.value.trim() || '';
   const singleDescription = isSingleDescriptionMode(type);
@@ -2157,9 +2677,11 @@ function extractBatchRow(type, row) {
   const rowDescriptionIsMeaningful = !singleDescription &&
     Boolean(rowDescription && !(type === 'LAST_SALDO' && rowDescription === 'Saldo akhir'));
 
+  const rowAmountIsMeaningful = !singleAmount && Boolean(rowAmountRaw);
+
   const meaningful = Boolean(
     recipientValue ||
-    amountRaw ||
+    rowAmountIsMeaningful ||
     rowDescriptionIsMeaningful ||
     (!bulk && sourceValue)
   );
@@ -2182,17 +2704,17 @@ function extractBatchRow(type, row) {
     return { date, sender: sender.account, recipient: recipient.account, amount, description };
   }
 
-  const provider = requireValidAccount(sourceValue, bulk ? 'bulk provider' : 'provider');
+  const provider = requireValidAccount(sourceValue, bulk ? 'bulk SOURCE' : 'SOURCE');
   const recipient = requireValidAccount(recipientValue, 'recipient');
-  if (provider.account === recipient.account) throw new Error(`Provider and recipient cannot be the same account (${provider.account}).`);
+  if (provider.account === recipient.account) throw new Error(`SOURCE and recipient cannot be the same account (${provider.account}).`);
 
   if (type === 'SALARY' && !normalizeStatus(provider.status).includes('OFFICE/SHOP')) {
-    throw new Error(`Provider ${provider.account} is not an OFFICE/SHOP account.`);
+    throw new Error(`SOURCE ${provider.account} is not an OFFICE/SHOP account.`);
   }
   if (type === 'REWARD') {
     const status = normalizeStatus(provider.status);
     if (!status.includes('OFFICE/SHOP') && !status.includes('STAFF')) {
-      throw new Error(`Provider ${provider.account} is not eligible for Rewards.`);
+      throw new Error(`SOURCE ${provider.account} is not eligible for Rewards.`);
     }
   }
   return { date, provider: provider.account, recipient: recipient.account, amount, description };
@@ -2231,6 +2753,65 @@ async function loadMonthlyReport() {
   }
 }
 
+function reportTransactionKey(row, index = 0) {
+  const txId = String(row?.txId || '').trim();
+  if (!txId) return `UNPAIRED-${index}`;
+  return txId.replace(/-(?:D|C)$/i, '');
+}
+
+function groupReportTransactions(rows) {
+  const grouped = new Map();
+
+  (rows || []).forEach((row, index) => {
+    const key = reportTransactionKey(row, index);
+    if (!grouped.has(key)) grouped.set(key, { key, rows: [] });
+    grouped.get(key).rows.push(row);
+  });
+
+  return [...grouped.values()].map(group => {
+    const members = group.rows;
+    const debit = members.find(row => /-D$/i.test(String(row.txId || ''))) || members.find(row => parseMoney(row.log) < 0) || null;
+    const credit = members.find(row => /-C$/i.test(String(row.txId || ''))) || members.find(row => parseMoney(row.log) > 0 && row !== debit) || null;
+    const paired = Boolean(debit && credit && debit !== credit);
+    const anchor = debit || credit || members[0] || {};
+
+    const sourceRow = paired ? debit : (parseMoney(anchor.log) < 0 ? anchor : null);
+    const recipientRow = paired ? credit : (parseMoney(anchor.log) >= 0 ? anchor : null);
+    const amountRow = debit || credit || anchor;
+    const amount = Math.abs(parseMoney(amountRow.log));
+    const txIds = members.map(row => String(row.txId || '').trim()).filter(Boolean);
+    const canEdit = members.length > 0 && members.every(row => Boolean(row.canEdit && row.txId));
+
+    return {
+      key: group.key,
+      displayId: paired ? group.key : (txIds[0] || group.key),
+      txIds,
+      rows: members,
+      paired,
+      date: anchor.date || '',
+      description: anchor.description || '',
+      staffId: anchor.staffId || '',
+      staffName: anchor.staffName || '',
+      amount,
+      canEdit,
+      source: sourceRow ? {
+        account: normalizeAccount(sourceRow.accountNumber),
+        displayAccount: sourceRow.accountNumber || '',
+        name: sourceRow.name || ''
+      } : null,
+      recipient: recipientRow ? {
+        account: normalizeAccount(recipientRow.accountNumber),
+        displayAccount: recipientRow.accountNumber || '',
+        name: recipientRow.name || ''
+      } : null
+    };
+  });
+}
+
+function findReportTransactionGroup(groupKey) {
+  return groupReportTransactions(state.reportRows).find(group => group.key === groupKey || group.displayId === groupKey) || null;
+}
+
 function searchTransactionInputs() {
   const query = String(els.reportSearchInput?.value || '').trim().toLowerCase();
 
@@ -2239,11 +2820,13 @@ function searchTransactionInputs() {
     return;
   }
 
-  const matches = state.reportRows.filter(row =>
-    String(row.txId || '').toLowerCase().includes(query)
-  );
+  const groups = groupReportTransactions(state.reportRows);
+  const matches = groups.filter(group => {
+    const idHaystack = [group.displayId, ...group.txIds].join(' ').toLowerCase();
+    return idHaystack.includes(query);
+  });
 
-  renderMonthlyReport(matches, els.reportMonth.value);
+  renderMonthlyReportGroups(matches, els.reportMonth.value);
 
   if (!matches.length) {
     toast(`No Transaction ID matching "${els.reportSearchInput.value.trim()}" was found in this month.`, 'error');
@@ -2253,27 +2836,38 @@ function searchTransactionInputs() {
 }
 
 function renderMonthlyReport(rows, month) {
+  renderMonthlyReportGroups(groupReportTransactions(rows), month);
+}
+
+function renderMonthlyReportGroups(groups, month) {
   els.reportTableBody.innerHTML = '';
   els.reportMonthLabel.textContent = monthLabel(month);
-  els.reportEmpty.classList.toggle('is-hidden', rows.length !== 0);
+  els.reportEmpty.classList.toggle('is-hidden', groups.length !== 0);
 
-  rows.forEach(row => {
-    const amount = parseMoney(row.log);
-    const canEdit = Boolean(row.canEdit && row.txId);
+  groups.forEach(group => {
     const tr = document.createElement('tr');
-    const ledgerAccount = normalizeAccount(row.accountNumber);
+    tr.className = group.paired ? 'report-transaction-paired' : 'report-transaction-single';
+
+    const routeStatus = group.paired ? '<span class="report-pair-badge">PAIRED</span>' : '<span class="report-pair-badge single">SINGLE-SIDED</span>';
+    const staffLine = group.staffName ? `Input by ${escapeHtml(group.staffName)}` : 'Input staff —';
 
     tr.innerHTML = `
-      <td>${escapeHtml(formatDateDisplay(row.date))}</td>
-      <td>${ledgerAccount ? `<button class="ledger-inline-link ledger-account-link" type="button" data-open-ledger="${escapeAttr(ledgerAccount)}">${escapeHtml(row.accountNumber || '')}</button>` : '—'}</td>
-      <td>${ledgerAccount ? `<button class="ledger-inline-link ledger-name-link" type="button" data-open-ledger="${escapeAttr(ledgerAccount)}">${escapeHtml(row.name || '—')}</button>` : escapeHtml(row.name || '—')}</td>
-      <td>${escapeHtml(row.description || '—')}</td>
-      <td>${escapeHtml(row.staffName || '—')}</td>
-      <td class="money-col ${amount < 0 ? 'amount-negative' : 'amount-positive'}">${escapeHtml(formatCurrency(amount, true))}</td>
+      <td>${escapeHtml(formatDateDisplay(group.date))}</td>
+      <td>
+        <div class="report-transaction-meta">
+          <strong>${escapeHtml(group.displayId || '—')}</strong>
+          <small>${staffLine}</small>
+          ${routeStatus}
+        </div>
+      </td>
+      <td>${reportPartyHtml(group.source, 'No sender / source')}</td>
+      <td>${reportPartyHtml(group.recipient, 'No recipient')}</td>
+      <td>${escapeHtml(group.description || '—')}</td>
+      <td class="money-col amount-positive">${escapeHtml(formatCurrency(group.amount, false))}</td>
       <td class="report-action-col">
         <div class="action-buttons">
-          <button type="button" data-edit-tx="${escapeAttr(row.txId || '')}" ${canEdit ? '' : 'disabled'}>EDIT</button>
-          <button type="button" class="danger" data-delete-tx="${escapeAttr(row.txId || '')}" ${canEdit ? '' : 'disabled'}>DELETE</button>
+          <button type="button" data-edit-report-group="${escapeAttr(group.key)}" ${group.canEdit ? '' : 'disabled'}>EDIT</button>
+          <button type="button" class="danger" data-delete-report-group="${escapeAttr(group.key)}" ${group.canEdit ? '' : 'disabled'}>DELETE</button>
         </div>
       </td>
     `;
@@ -2281,55 +2875,99 @@ function renderMonthlyReport(rows, month) {
   });
 }
 
-function handleReportAction(event) {
-  const edit = event.target.closest('[data-edit-tx]');
-  const del = event.target.closest('[data-delete-tx]');
-  if (edit && !edit.disabled) openEditTransaction(edit.dataset.editTx);
-  if (del && !del.disabled) deleteTransaction(del.dataset.deleteTx);
+function reportPartyHtml(party, emptyLabel) {
+  if (!party?.account) {
+    return `<span class="report-party-empty">${escapeHtml(emptyLabel)}</span>`;
+  }
+
+  return `
+    <div class="report-party">
+      <button class="ledger-inline-link ledger-name-link" type="button" data-open-ledger="${escapeAttr(party.account)}">${escapeHtml(party.name || '—')}</button>
+      <button class="ledger-inline-link ledger-account-link" type="button" data-open-ledger="${escapeAttr(party.account)}">${escapeHtml(party.displayAccount || party.account)}</button>
+    </div>
+  `;
 }
 
-function openEditTransaction(txId) {
-  const row = state.reportRows.find(x => x.txId === txId);
-  if (!row) return;
-  els.editTransactionId.value = txId;
-  els.editTransactionDate.value = normalizeDateForInput(row.date);
-  els.editTransactionAmount.dataset.rawValue = String(Math.abs(parseMoney(row.log)));
-  els.editTransactionAmount.value = Math.abs(parseMoney(row.log)).toLocaleString('en-US');
-  els.editTransactionAmount.dataset.sign = parseMoney(row.log) < 0 ? '-' : '+';
-  els.editTransactionDescription.value = row.description || '';
-  els.editTransactionStaff.value = row.staffId || '';
+function handleReportAction(event) {
+  const edit = event.target.closest('[data-edit-report-group]');
+  const del = event.target.closest('[data-delete-report-group]');
+  if (edit && !edit.disabled) openEditTransaction(edit.dataset.editReportGroup);
+  if (del && !del.disabled) deleteTransaction(del.dataset.deleteReportGroup);
+}
+
+function openEditTransaction(groupKey) {
+  const group = findReportTransactionGroup(groupKey);
+  if (!group) return;
+
+  els.editTransactionId.value = group.key;
+  els.editTransactionDate.value = normalizeDateForInput(group.date);
+  els.editTransactionAmount.dataset.rawValue = String(group.amount);
+  els.editTransactionAmount.value = Number(group.amount || 0).toLocaleString('en-US');
+  delete els.editTransactionAmount.dataset.sign;
+  els.editTransactionDescription.value = group.description || '';
+  els.editTransactionStaff.value = group.staffId || '';
+
+  const route = document.getElementById('editTransactionRoute');
+  if (route) {
+    const source = group.source
+      ? `${escapeHtml(group.source.name || '—')}<small>${escapeHtml(group.source.displayAccount || group.source.account)}</small>`
+      : `Single-sided<small>No sender / source</small>`;
+    const recipient = group.recipient
+      ? `${escapeHtml(group.recipient.name || '—')}<small>${escapeHtml(group.recipient.displayAccount || group.recipient.account)}</small>`
+      : `Single-sided<small>No recipient</small>`;
+
+    route.innerHTML = `
+      <div class="edit-route-id">
+        <span>TRANSACTION</span>
+        <strong>${escapeHtml(group.displayId || '—')}</strong>
+        <small>${group.paired ? 'Sender and recipient log rows will stay synchronized.' : 'Single-sided ledger entry.'}</small>
+      </div>
+      <div class="edit-route-party">
+        <span>FROM</span>
+        <strong>${source}</strong>
+      </div>
+      <div class="edit-route-arrow" aria-hidden="true">→</div>
+      <div class="edit-route-party">
+        <span>TO</span>
+        <strong>${recipient}</strong>
+      </div>`;
+  }
+
   openModal('editTransactionModal');
 }
 
 async function saveTransactionRevision(event) {
   event.preventDefault();
-  const txId = els.editTransactionId.value;
+  const groupKey = els.editTransactionId.value;
+  const group = findReportTransactionGroup(groupKey);
   const staff = state.staff.find(x => x.id === els.editTransactionStaff.value);
   const raw = els.editTransactionAmount.dataset.rawValue || els.editTransactionAmount.value.replace(/,/g, '');
   const amount = Number(raw);
+
+  if (!group) return toast('Transaction group could not be found. Reload the month and try again.', 'error');
   if (!staff) return toast('Select the input staff.', 'error');
   if (!els.editTransactionDescription.value.trim()) return toast('Description is mandatory.', 'error');
   if (!amount || amount <= 0) return toast('Amount must be greater than zero.', 'error');
 
-  const original = state.reportRows.find(x => x.txId === txId);
-  if (!original) return;
-  const signedAmount = parseMoney(original.log) < 0 ? -amount : amount;
-
-  showLoading('Saving revision…');
+  showLoading(group.paired ? 'Saving paired transaction revision…' : 'Saving revision…');
   try {
-    const result = await apiPost('updateTransaction', {
-      txId,
-      date: els.editTransactionDate.value,
-      log: signedAmount,
-      description: els.editTransactionDescription.value.trim(),
-      inputStaffId: staff.id,
-      inputStaffName: staff.name,
-      tellerId: state.teller.id,
-      tellerName: state.teller.name
-    });
-    if (!result.success) throw new Error(result.message || 'Revision failed');
+    for (const original of group.rows) {
+      const signedAmount = parseMoney(original.log) < 0 ? -amount : amount;
+      const result = await apiPost('updateTransaction', {
+        txId: original.txId,
+        date: els.editTransactionDate.value,
+        log: signedAmount,
+        description: els.editTransactionDescription.value.trim(),
+        inputStaffId: staff.id,
+        inputStaffName: staff.name,
+        tellerId: state.teller.id,
+        tellerName: state.teller.name
+      });
+      if (!result.success) throw new Error(result.message || `Revision failed for ${original.txId}`);
+    }
+
     closeModal('editTransactionModal');
-    toast('Transaction revised.', 'success');
+    toast(group.paired ? 'Transaction pair revised together.' : 'Transaction revised.', 'success');
     await refreshSharedData();
     await loadMonthlyReport();
     if (state.currentAccount) await refreshCurrentAccountView();
@@ -2340,21 +2978,28 @@ async function saveTransactionRevision(event) {
   }
 }
 
-async function deleteTransaction(txId) {
-  const row = state.reportRows.find(x => x.txId === txId);
-  if (!row) return;
-  const ok = window.confirm(`Delete transaction ${txId}? This is only permitted within one month of creation.`);
+async function deleteTransaction(groupKey) {
+  const group = findReportTransactionGroup(groupKey);
+  if (!group) return;
+
+  const scopeText = group.paired
+    ? `Delete transaction ${group.displayId}? Both sender and recipient log rows will be deleted together.`
+    : `Delete transaction ${group.displayId}? This is only permitted within one month of creation.`;
+  const ok = window.confirm(scopeText);
   if (!ok) return;
 
-  showLoading('Deleting transaction…');
+  showLoading(group.paired ? 'Deleting paired transaction…' : 'Deleting transaction…');
   try {
-    const result = await apiPost('deleteTransaction', {
-      txId,
-      tellerId: state.teller.id,
-      tellerName: state.teller.name
-    });
-    if (!result.success) throw new Error(result.message || 'Delete failed');
-    toast('Transaction deleted.', 'success');
+    for (const row of group.rows) {
+      const result = await apiPost('deleteTransaction', {
+        txId: row.txId,
+        tellerId: state.teller.id,
+        tellerName: state.teller.name
+      });
+      if (!result.success) throw new Error(result.message || `Delete failed for ${row.txId}`);
+    }
+
+    toast(group.paired ? 'Transaction pair deleted.' : 'Transaction deleted.', 'success');
     await refreshSharedData();
     await loadMonthlyReport();
     if (state.currentAccount) await refreshCurrentAccountView();
@@ -2598,6 +3243,10 @@ function closeModal(id) {
   if (!modal) return;
   modal.classList.add('is-hidden');
   modal.setAttribute('aria-hidden', 'true');
+
+  if (id === 'tellerLoginModal' && !state.teller) {
+    updateMobilePublicNavigation(state.currentAccount ? 'account' : 'home');
+  }
 }
 
 function showLoading(text = 'Loading…') {

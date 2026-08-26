@@ -1569,3 +1569,4667 @@ body.home-view-active .teller-entry {
   }
 }
 
+
+/* =========================================================
+   MOBILE BANKING APP UI — MOBILE ONLY
+   Desktop rules above remain untouched. Everything in this
+   section activates only at phone/tablet widths.
+========================================================= */
+
+.mobile-app-nav,
+.mobile-workspace-user,
+.mobile-workspace-title {
+  display: none;
+}
+
+@media (max-width: 780px) {
+  :root {
+    --mobile-page: #f4f2eb;
+    --mobile-card: #ffffff;
+    --mobile-soft: #f8f7f2;
+    --mobile-line: rgba(8,19,26,.08);
+    --mobile-shadow: 0 14px 36px rgba(8,19,26,.09);
+    --mobile-radius: 24px;
+    --mobile-nav-height: 76px;
+  }
+
+  html {
+    scroll-padding-top: 124px;
+    background: var(--mobile-page);
+  }
+
+  body {
+    min-width: 0;
+    padding-bottom: calc(var(--mobile-nav-height) + env(safe-area-inset-bottom, 0px));
+    background:
+      radial-gradient(circle at 100% 0%, rgba(200,154,67,.10), transparent 28%),
+      var(--mobile-page);
+  }
+
+  body.teller-workspace-open {
+    padding-bottom: 0;
+  }
+
+  .noise {
+    opacity: .018;
+  }
+
+  /* ---------- Public mobile app header ---------- */
+  .topbar,
+  body.home-view-active .topbar {
+    position: sticky;
+    top: 0;
+    z-index: 70;
+    min-height: 66px;
+    display: grid;
+    grid-template-columns: minmax(0,1fr) auto;
+    grid-template-rows: auto;
+    align-items: center;
+    gap: 10px;
+    padding: 9px 16px;
+    border-bottom: 1px solid var(--mobile-line);
+    background: rgba(250,249,245,.94);
+    box-shadow: 0 8px 24px rgba(8,19,26,.045);
+    backdrop-filter: blur(20px);
+  }
+
+  .brand {
+    min-width: 0;
+    gap: 10px;
+  }
+
+  .brand-logo {
+    width: 42px;
+    height: 42px;
+    flex: 0 0 auto;
+  }
+
+  .brand-copy {
+    min-width: 0;
+    display: flex;
+    gap: 1px;
+  }
+
+  .brand-kicker {
+    font-size: 7px;
+    letter-spacing: .14em;
+  }
+
+  .brand-copy strong {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: 17px;
+    letter-spacing: .04em;
+  }
+
+  .teller-entry {
+    position: static;
+    right: auto;
+    top: auto;
+    justify-self: end;
+    min-height: 39px;
+    max-width: 126px;
+    padding: 8px 11px;
+    border-color: rgba(8,19,26,.08);
+    background: #fff;
+    box-shadow: 0 6px 18px rgba(8,19,26,.05);
+    color: var(--navy-deep);
+    font-size: 8px;
+    line-height: 1.15;
+    letter-spacing: .065em;
+    text-align: center;
+  }
+
+  .teller-entry .status-dot {
+    display: block;
+    width: 6px;
+    height: 6px;
+    box-shadow: 0 0 0 3px rgba(200,154,67,.11);
+  }
+
+  .account-search {
+    grid-column: 1 / -1;
+    grid-row: auto;
+    min-height: 48px;
+    margin: 2px 0 3px;
+    padding: 4px 5px 4px 13px;
+    border: 1px solid rgba(8,19,26,.08);
+    border-radius: 16px;
+    background: #fff;
+    box-shadow: 0 8px 22px rgba(8,19,26,.05);
+  }
+
+  body.home-view-active .topbar .account-search {
+    display: none;
+  }
+
+  .account-search input {
+    padding: 0 8px;
+    font-size: 13px;
+  }
+
+  .account-search button {
+    min-height: 38px;
+    padding: 9px 12px;
+    border-radius: 12px;
+    font-size: 8px;
+    letter-spacing: .07em;
+  }
+
+  main {
+    width: 100%;
+    margin: 0;
+  }
+
+  /* ---------- Mobile home / search screen ---------- */
+  .welcome-view {
+    width: calc(100% - 24px);
+    min-height: calc(100svh - 66px - var(--mobile-nav-height) - 24px);
+    margin: 12px auto;
+    padding: clamp(34px, 8vh, 70px) 18px 34px;
+    justify-content: flex-end;
+    border-radius: 30px;
+    box-shadow: 0 20px 50px rgba(8,19,26,.18);
+    text-align: left;
+  }
+
+  .welcome-art-frame::before {
+    background:
+      linear-gradient(180deg, rgba(5,15,22,.18) 0%, rgba(5,15,22,.22) 38%, rgba(5,15,22,.84) 92%),
+      linear-gradient(90deg, rgba(5,15,22,.32), transparent 70%);
+  }
+
+  .welcome-art-frame::after {
+    inset: 8px;
+    border-radius: 22px;
+    border-color: rgba(243,214,117,.22);
+  }
+
+  .welcome-art-frame img {
+    object-position: 54% center;
+    filter: saturate(.86) contrast(1.02) brightness(.88);
+  }
+
+  .welcome-emblem {
+    align-self: flex-start;
+    width: 74px;
+    height: 74px;
+    margin: 0 0 18px;
+    background: rgba(5,15,22,.38);
+  }
+
+  .welcome-view > .eyebrow {
+    align-self: stretch;
+    margin: 0;
+    font-size: 8px;
+    letter-spacing: .16em;
+  }
+
+  .welcome-copy {
+    max-width: 420px;
+    margin: 8px 0 0;
+    font-size: 13px;
+    line-height: 1.55;
+    color: rgba(255,248,219,.78);
+  }
+
+  .hero-search {
+    align-self: stretch;
+    width: 100%;
+    margin-top: 22px;
+    grid-template-columns: 1fr;
+    gap: 5px;
+    padding: 6px;
+    border-radius: 18px;
+    background: rgba(255,255,255,.94);
+    border-color: rgba(255,255,255,.48);
+    box-shadow: 0 14px 34px rgba(0,0,0,.22);
+  }
+
+  .hero-search input {
+    min-height: 46px;
+    padding: 11px 12px;
+    color: var(--navy-deep);
+    text-align: left;
+    font-size: 14px;
+    letter-spacing: .08em;
+  }
+
+  .hero-search input::placeholder {
+    color: rgba(8,19,26,.42);
+  }
+
+  .hero-search button {
+    min-height: 46px;
+    min-width: 0;
+    width: 100%;
+    padding: 12px;
+    border-radius: 13px;
+    background: linear-gradient(135deg, var(--navy-deep), var(--navy));
+    color: var(--gold-bright);
+    box-shadow: none;
+  }
+
+  .trust-row {
+    align-self: stretch;
+    justify-content: flex-start;
+    gap: 7px;
+    margin-top: 16px;
+    font-size: 7px;
+    letter-spacing: .08em;
+  }
+
+  .trust-row span {
+    padding: 5px 7px;
+    border: 1px solid rgba(255,255,255,.13);
+    border-radius: 999px;
+    background: rgba(5,15,22,.28);
+  }
+
+  .trust-row span::before {
+    display: none;
+  }
+
+  /* ---------- Customer account, banking-card hierarchy ---------- */
+  .account-view {
+    width: 100%;
+    padding: 16px 12px 28px;
+  }
+
+  .account-hero {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .balance-card {
+    order: 1;
+    position: relative;
+    min-height: 202px;
+    padding: 22px;
+    overflow: hidden;
+    border-radius: 26px;
+    background:
+      radial-gradient(circle at 84% 24%, rgba(243,214,117,.13), transparent 30%),
+      radial-gradient(circle at 68% 100%, rgba(255,255,255,.05), transparent 34%),
+      linear-gradient(140deg, #091923, #16303c 56%, #0c202b);
+    box-shadow: 0 18px 42px rgba(8,19,26,.19);
+  }
+
+  .balance-card::after {
+    content: "ZAIGEN";
+    position: absolute;
+    right: 19px;
+    bottom: 16px;
+    font-family: "Cormorant Garamond", serif;
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: .18em;
+    color: rgba(243,214,117,.48);
+  }
+
+  .balance-topline {
+    position: relative;
+    z-index: 1;
+    align-items: center;
+    gap: 12px;
+    font-size: 8px;
+  }
+
+  .balance-topline #balanceStatusText {
+    padding: 5px 8px;
+    border: 1px solid rgba(255,255,255,.13);
+    border-radius: 999px;
+    background: rgba(255,255,255,.06);
+    white-space: nowrap;
+  }
+
+  .balance-amount {
+    position: relative;
+    z-index: 1;
+    margin: 18px 0 12px;
+    font-family: "Inter", sans-serif;
+    font-size: clamp(36px, 10vw, 48px);
+    line-height: 1;
+    letter-spacing: -.04em;
+  }
+
+  .balance-footer {
+    position: relative;
+    z-index: 1;
+    max-width: 48%;
+    padding-top: 13px;
+  }
+
+  .identity-card {
+    order: 2;
+    display: grid;
+    grid-template-columns: 78px minmax(0,1fr);
+    gap: 14px;
+    align-items: center;
+    padding: 16px;
+    border-radius: 22px;
+    background: rgba(255,255,255,.94);
+    border: 1px solid var(--mobile-line);
+    box-shadow: var(--mobile-shadow);
+  }
+
+  .photo-frame {
+    width: 78px;
+    height: 78px;
+    aspect-ratio: 1;
+    padding: 4px;
+    justify-self: auto;
+    border-radius: 20px;
+    box-shadow: 0 10px 22px rgba(8,19,26,.13);
+  }
+
+  .photo-frame::before {
+    inset: 2px;
+    border-radius: 17px;
+  }
+
+  .photo-frame::after {
+    inset: 7px;
+    border-radius: 12px;
+  }
+
+  .photo-frame img {
+    border-radius: 14px;
+  }
+
+  .status-badge {
+    left: 6px;
+    right: 6px;
+    bottom: 6px;
+    max-width: none;
+    padding: 5px 6px;
+    font-size: 6px;
+    text-align: center;
+  }
+
+  .identity-copy {
+    min-width: 0;
+    text-align: left;
+  }
+
+  .identity-copy > .eyebrow {
+    font-size: 7px;
+  }
+
+  .identity-copy h2 {
+    margin: 3px 0 1px;
+    font-family: "Inter", sans-serif;
+    font-size: clamp(20px, 6vw, 26px);
+    font-weight: 700;
+    letter-spacing: -.03em;
+  }
+
+  .identity-copy h2 .profile-ledger-link {
+    display: block;
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .kanji-name {
+    margin: 0 0 12px;
+    font-size: 14px;
+  }
+
+  .identity-meta {
+    grid-template-columns: minmax(0,1fr) minmax(0,.8fr);
+    gap: 10px;
+    padding-top: 10px;
+    text-align: left;
+  }
+
+  .identity-meta div {
+    min-width: 0;
+    gap: 3px;
+  }
+
+  .identity-meta span {
+    font-size: 7px;
+  }
+
+  .identity-meta strong,
+  .identity-meta a {
+    display: block;
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: 10px;
+  }
+
+  /* ---------- Transaction activity as native-looking list ---------- */
+  .ledger-section {
+    margin-top: 12px;
+    padding: 16px 12px 12px;
+    border-radius: 22px;
+    background: rgba(255,255,255,.94);
+    border: 1px solid var(--mobile-line);
+    box-shadow: var(--mobile-shadow);
+  }
+
+  .section-heading {
+    display: grid;
+    grid-template-columns: minmax(0,1fr) auto;
+    gap: 12px;
+    align-items: end;
+  }
+
+  .section-heading h3 {
+    margin-top: 3px;
+    font-family: "Inter", sans-serif;
+    font-size: 22px;
+    letter-spacing: -.025em;
+  }
+
+  .section-heading .eyebrow {
+    font-size: 7px;
+  }
+
+  .ledger-filter-tools {
+    width: auto;
+    display: grid;
+    grid-template-columns: minmax(122px,1fr) 38px;
+    gap: 7px;
+    align-items: end;
+    justify-content: end;
+  }
+
+  .ledger-filter-tools > #transactionCount {
+    grid-column: 1 / -1;
+    grid-row: 2;
+    justify-self: end;
+    font-size: 8px;
+  }
+
+  .ledger-month-control {
+    min-width: 0;
+    gap: 3px;
+  }
+
+  .ledger-month-control > span {
+    font-size: 6px;
+  }
+
+  .ledger-month-control input {
+    width: 100%;
+    min-height: 36px;
+    padding: 6px 7px;
+    border-radius: 11px;
+    font-size: 9px;
+    background: var(--mobile-soft);
+  }
+
+  .icon-button {
+    width: 36px;
+    height: 36px;
+    background: var(--mobile-soft);
+    border-color: var(--mobile-line);
+  }
+
+  .ledger-inline-loading {
+    min-height: 72px;
+    margin-top: 12px;
+    padding: 13px;
+    border-color: var(--mobile-line);
+    background: var(--mobile-soft);
+  }
+
+  .ledger-inline-loading strong {
+    font-size: 11px;
+  }
+
+  .ledger-inline-loading small {
+    font-size: 9px;
+  }
+
+  .ledger-scroll-shell {
+    margin-top: 8px;
+  }
+
+  .ledger-scroll-wrap {
+    max-height: min(55dvh, 590px);
+    overflow-x: hidden;
+    overflow-y: auto;
+    padding-right: 2px;
+    border-radius: 18px;
+  }
+
+  .ledger-scroll-wrap::-webkit-scrollbar {
+    width: 5px;
+  }
+
+  .ledger-scroll-wrap::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  .ledger-scroll-wrap::-webkit-scrollbar-thumb {
+    border: 0;
+    background: rgba(8,19,26,.18);
+  }
+
+  .ledger-table {
+    display: block;
+    width: 100%;
+    min-width: 0;
+    margin: 0;
+  }
+
+  .ledger-table thead {
+    display: none;
+  }
+
+  .ledger-table tbody {
+    display: grid;
+    gap: 8px;
+    width: 100%;
+    padding: 0;
+  }
+
+  .ledger-table tr {
+    width: 100%;
+    min-width: 0;
+    display: grid;
+    grid-template-columns: 44px minmax(0,1fr) auto;
+    grid-template-areas:
+      "icon desc amount"
+      "icon counter amount"
+      "icon date amount";
+    align-items: center;
+    column-gap: 10px;
+    row-gap: 2px;
+    padding: 11px 9px;
+    border: 1px solid rgba(8,19,26,.055);
+    border-radius: 17px;
+    background: #fff;
+    box-shadow: 0 6px 18px rgba(8,19,26,.035);
+  }
+
+  .ledger-table td {
+    min-width: 0;
+    padding: 0;
+    border: 0;
+    font-size: 10px;
+  }
+
+  .ledger-table td:nth-child(1) {
+    grid-area: date;
+    color: var(--muted);
+    font-size: 8px;
+  }
+
+  .ledger-table td:nth-child(2) {
+    grid-area: icon;
+    width: 42px;
+    height: 42px;
+    display: grid;
+    place-items: center;
+    border-radius: 14px;
+    background: rgba(29,48,59,.06);
+  }
+
+  .ledger-table td:nth-child(3) {
+    grid-area: counter;
+  }
+
+  .ledger-table td:nth-child(4) {
+    grid-area: desc;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    color: var(--navy-deep);
+    font-size: 11px;
+    font-weight: 750;
+  }
+
+  .ledger-table td:nth-child(5) {
+    grid-area: amount;
+    align-self: center;
+    min-width: 76px;
+    text-align: right;
+    white-space: nowrap;
+    font-size: 11px;
+  }
+
+  .ledger-table .log-pill {
+    width: 32px;
+    height: 32px;
+    display: grid;
+    place-items: center;
+    padding: 0;
+    border-radius: 11px;
+    font-size: 0;
+    letter-spacing: 0;
+    background: rgba(29,48,59,.08);
+    color: var(--navy-deep);
+  }
+
+  .ledger-table .log-pill::before {
+    content: "•";
+    font-size: 19px;
+    line-height: 1;
+  }
+
+  .ledger-table tr.transaction-credit td:nth-child(2) {
+    background: rgba(46,109,88,.08);
+  }
+
+  .ledger-table tr.transaction-credit .log-pill {
+    background: rgba(46,109,88,.10);
+    color: var(--green);
+  }
+
+  .ledger-table tr.transaction-credit .log-pill::before {
+    content: "↓";
+    font-size: 17px;
+  }
+
+  .ledger-table tr.transaction-debit td:nth-child(2) {
+    background: rgba(154,64,57,.07);
+  }
+
+  .ledger-table tr.transaction-debit .log-pill {
+    background: rgba(154,64,57,.09);
+    color: var(--red);
+  }
+
+  .ledger-table tr.transaction-debit .log-pill::before {
+    content: "↑";
+    font-size: 17px;
+  }
+
+  .counterparty-cell {
+    min-width: 0;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    overflow: hidden;
+  }
+
+  .counterparty-cell > span {
+    flex: 0 0 auto;
+    font-size: 6px;
+  }
+
+  .counterparty-cell .ledger-name-link {
+    max-width: 45%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: 8px;
+  }
+
+  .counterparty-cell .ledger-account-link {
+    max-width: 42%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: 7px;
+  }
+
+  .ledger-scroll-nav {
+    position: sticky;
+    right: auto;
+    bottom: 6px;
+    z-index: 10;
+    width: max-content;
+    margin: 8px 5px 0 auto;
+    grid-auto-flow: column;
+    align-items: center;
+    padding: 5px 6px;
+    border: 1px solid var(--mobile-line);
+    background: rgba(255,255,255,.94);
+    box-shadow: 0 8px 24px rgba(8,19,26,.10);
+  }
+
+  .ledger-scroll-nav button {
+    width: 27px;
+    height: 27px;
+    background: var(--navy-deep);
+  }
+
+  .ledger-scroll-nav span {
+    writing-mode: horizontal-tb;
+    transform: none;
+    font-size: 6px;
+  }
+
+  .empty-state {
+    padding: 40px 16px;
+  }
+
+  .site-footer {
+    width: calc(100% - 24px);
+    padding-bottom: 18px;
+    border-top-color: var(--mobile-line);
+  }
+
+  /* ---------- Fixed public bottom navigation ---------- */
+  .mobile-app-nav {
+    position: fixed;
+    left: 10px;
+    right: 10px;
+    bottom: max(8px, env(safe-area-inset-bottom, 0px));
+    z-index: 120;
+    height: 66px;
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0,1fr));
+    gap: 4px;
+    padding: 6px;
+    border: 1px solid rgba(8,19,26,.07);
+    border-radius: 22px;
+    background: rgba(255,255,255,.95);
+    box-shadow: 0 16px 38px rgba(8,19,26,.16);
+    backdrop-filter: blur(20px);
+  }
+
+  body.teller-workspace-open .mobile-app-nav {
+    display: none;
+  }
+
+  .mobile-app-nav-button {
+    min-width: 0;
+    display: grid;
+    grid-template-rows: 27px auto;
+    align-items: center;
+    justify-items: center;
+    gap: 1px;
+    padding: 3px 2px;
+    border: 0;
+    border-radius: 16px;
+    background: transparent;
+    color: #9a9ca3;
+    font-size: 8px;
+    font-weight: 700;
+  }
+
+  .mobile-app-nav-button svg {
+    width: 22px;
+    height: 22px;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 1.75;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+  }
+
+  .mobile-app-nav-button.active {
+    background: rgba(29,48,59,.07);
+    color: var(--navy-deep);
+  }
+
+  .mobile-app-nav-button.active span {
+    color: var(--gold-deep);
+  }
+
+  /* ---------- Mobile modals as banking bottom sheets ---------- */
+  .modal-shell {
+    place-items: end center;
+    padding: 0;
+  }
+
+  .modal-card {
+    width: 100%;
+    max-height: 92dvh;
+    overflow: auto;
+    padding: 28px 20px calc(24px + env(safe-area-inset-bottom, 0px));
+    border-radius: 28px 28px 0 0;
+    background: #fffdf4;
+    box-shadow: 0 -24px 70px rgba(0,0,0,.24);
+  }
+
+  .modal-card::before {
+    content: "";
+    display: block;
+    width: 42px;
+    height: 4px;
+    margin: -14px auto 16px;
+    border-radius: 999px;
+    background: rgba(8,19,26,.14);
+  }
+
+  .modal-close {
+    top: 16px;
+    right: 16px;
+  }
+
+  .auth-emblem {
+    width: 60px;
+    height: 60px;
+    margin-bottom: 18px;
+  }
+
+  .modal-card h2 {
+    font-family: "Inter", sans-serif;
+    font-size: 30px;
+    letter-spacing: -.03em;
+  }
+
+  .stack-form input,
+  .stack-form select,
+  .staff-select {
+    min-height: 50px;
+    border-radius: 14px;
+    background: #fff;
+  }
+
+  .primary-button,
+  .secondary-button,
+  .process-button {
+    min-height: 50px;
+    border-radius: 14px;
+  }
+
+  .toast-region {
+    top: auto;
+    right: 12px;
+    bottom: calc(var(--mobile-nav-height) + 16px + env(safe-area-inset-bottom, 0px));
+    width: calc(100vw - 24px);
+  }
+
+  body.teller-workspace-open .toast-region {
+    bottom: 92px;
+  }
+
+  /* =======================================================
+     TELLER DESK — APP WORKSPACE
+  ======================================================= */
+  .workspace-shell {
+    display: flex;
+    overflow: hidden;
+    background: var(--mobile-page);
+  }
+
+  .workspace-main {
+    width: 100%;
+    height: 100dvh;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  .workspace-header {
+    position: relative;
+    z-index: 35;
+    flex: 0 0 auto;
+    min-height: 68px;
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--mobile-line);
+    background: rgba(250,249,245,.96);
+    box-shadow: 0 6px 20px rgba(8,19,26,.04);
+    backdrop-filter: blur(18px);
+  }
+
+  .workspace-header > div {
+    min-width: 0;
+    display: grid;
+    gap: 1px;
+  }
+
+  .workspace-header .eyebrow {
+    font-size: 6px;
+  }
+
+  .mobile-workspace-title {
+    display: block;
+    margin: 0;
+    font-family: "Inter", sans-serif;
+    font-size: 21px;
+    letter-spacing: -.025em;
+  }
+
+  .workspace-close {
+    min-height: 36px;
+    padding: 7px 10px;
+    border: 1px solid var(--mobile-line);
+    border-radius: 11px;
+    background: #fff;
+    color: var(--navy-deep);
+    font-size: 7px;
+    font-weight: 800;
+  }
+
+  .mobile-workspace-user {
+    flex: 0 0 auto;
+    display: grid;
+    grid-template-columns: 38px minmax(0,1fr) auto;
+    align-items: center;
+    gap: 10px;
+    margin: 9px 12px 0;
+    padding: 9px 10px;
+    border: 1px solid var(--mobile-line);
+    border-radius: 18px;
+    background: #fff;
+    box-shadow: 0 8px 24px rgba(8,19,26,.045);
+  }
+
+  .mobile-workspace-avatar {
+    width: 38px;
+    height: 38px;
+    display: grid;
+    place-items: center;
+    border-radius: 13px;
+    background: linear-gradient(145deg, var(--navy-deep), var(--navy));
+    color: var(--gold-bright);
+    font-weight: 800;
+  }
+
+  .mobile-workspace-user-copy {
+    min-width: 0;
+    display: grid;
+    grid-template-columns: minmax(0,1fr) auto;
+    grid-template-areas:
+      "label id"
+      "name id";
+    gap: 1px 7px;
+  }
+
+  .mobile-workspace-user-copy span {
+    grid-area: label;
+    font-size: 6px;
+    text-transform: uppercase;
+    letter-spacing: .1em;
+    color: var(--muted);
+  }
+
+  .mobile-workspace-user-copy strong {
+    grid-area: name;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: 11px;
+  }
+
+  .mobile-workspace-user-copy small {
+    grid-area: id;
+    align-self: center;
+    padding: 4px 6px;
+    border-radius: 999px;
+    background: rgba(200,154,67,.09);
+    color: var(--gold-deep);
+    font-size: 7px;
+    font-weight: 800;
+  }
+
+  #mobileTellerLogoutButton {
+    min-height: 34px;
+    padding: 7px 9px;
+    border: 1px solid rgba(154,64,57,.16);
+    border-radius: 11px;
+    background: rgba(154,64,57,.04);
+    color: var(--red);
+    font-size: 7px;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: .06em;
+  }
+
+  .workspace-content {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-x: hidden;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    padding: 14px 12px 112px;
+    scroll-padding-top: 12px;
+  }
+
+  .workspace-sidebar {
+    position: fixed;
+    left: 8px;
+    right: 8px;
+    bottom: max(7px, env(safe-area-inset-bottom, 0px));
+    top: auto;
+    z-index: 80;
+    width: auto;
+    min-height: 0;
+    height: 70px;
+    display: block;
+    padding: 6px;
+    border: 1px solid rgba(8,19,26,.08);
+    border-radius: 22px;
+    background: rgba(255,255,255,.96);
+    color: var(--navy-deep);
+    box-shadow: 0 16px 42px rgba(8,19,26,.18);
+    backdrop-filter: blur(20px);
+  }
+
+  .workspace-brand,
+  .workspace-user {
+    display: none;
+  }
+
+  .teller-nav {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    gap: 4px;
+    margin: 0;
+    padding: 0 2px 2px;
+    overflow-x: auto;
+    overflow-y: hidden;
+    overscroll-behavior-x: contain;
+    scrollbar-width: none;
+    scroll-snap-type: x proximity;
+  }
+
+  .teller-nav::-webkit-scrollbar {
+    display: none;
+  }
+
+  .teller-nav button {
+    flex: 0 0 102px;
+    min-width: 0;
+    height: 56px;
+    display: grid;
+    grid-template-columns: 25px minmax(0,1fr);
+    align-items: center;
+    gap: 5px;
+    scroll-snap-align: start;
+    white-space: normal;
+    padding: 6px 7px;
+    border-radius: 15px;
+    background: transparent;
+    color: #8b8f94;
+    font-size: 7px;
+    line-height: 1.15;
+    font-weight: 700;
+  }
+
+  .teller-nav button span {
+    width: 25px;
+    height: 25px;
+    display: grid;
+    place-items: center;
+    border-radius: 9px;
+    background: rgba(29,48,59,.055);
+    color: inherit;
+    font-size: 7px;
+  }
+
+  .teller-nav button:hover,
+  .teller-nav button.active {
+    background: rgba(29,48,59,.07);
+    color: var(--navy-deep);
+  }
+
+  .teller-nav button.active span {
+    background: linear-gradient(145deg, var(--navy-deep), var(--navy));
+    color: var(--gold-bright);
+  }
+
+  .workspace-credit {
+    display: none;
+  }
+
+  /* ---------- Mobile teller panels ---------- */
+  .panel-description,
+  .report-heading,
+  .accounts-heading {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
+    margin-bottom: 12px;
+  }
+
+  .panel-description h3 {
+    margin: 0;
+    font-family: "Inter", sans-serif;
+    font-size: 25px;
+    line-height: 1.1;
+    letter-spacing: -.035em;
+  }
+
+  .panel-description p {
+    margin-top: 5px;
+    max-width: none;
+    font-size: 10px;
+    line-height: 1.5;
+  }
+
+  .panel-controls {
+    width: 100%;
+    display: grid;
+    grid-template-columns: repeat(2,minmax(0,1fr));
+    gap: 8px;
+    align-items: stretch;
+    justify-content: stretch;
+    padding: 9px;
+    border: 1px solid var(--mobile-line);
+    border-radius: 17px;
+    background: #fff;
+  }
+
+  .panel-controls .mode-control,
+  .panel-controls .description-mode-control {
+    min-width: 0;
+    display: grid;
+    gap: 5px;
+  }
+
+  .panel-controls .row-count-control {
+    grid-column: 1 / -1;
+    display: grid;
+    grid-template-columns: 1fr 92px;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .mode-switch {
+    width: 100%;
+    border-color: var(--mobile-line);
+    background: var(--mobile-soft);
+  }
+
+  .mode-option {
+    min-width: 0;
+    min-height: 34px;
+    flex: 1;
+    padding: 7px 4px;
+    font-size: 6px;
+    letter-spacing: .055em;
+  }
+
+  .row-count-input {
+    width: 92px;
+    min-height: 38px;
+    justify-self: end;
+    border-color: var(--mobile-line);
+    background: var(--mobile-soft);
+  }
+
+  .bulk-config,
+  .single-desc-config {
+    grid-template-columns: 1fr;
+    gap: 10px;
+    margin-bottom: 10px;
+    padding: 13px;
+    border-radius: 18px;
+  }
+
+  .bulk-config-copy > strong {
+    font-size: 21px;
+  }
+
+  .bulk-source-fields {
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+
+  .bulk-provider-field {
+    width: 100%;
+    justify-self: stretch;
+  }
+
+  .single-desc-copy > small,
+  .bulk-config-copy > small {
+    font-size: 9px;
+  }
+
+  .batch-grid {
+    display: grid;
+    gap: 10px;
+    overflow: visible;
+    padding: 0;
+  }
+
+  .batch-row,
+  .batch-row.last-saldo,
+  .batch-row.transfer,
+  .batch-row.provider {
+    min-width: 0;
+    width: 100%;
+    display: grid;
+    grid-template-columns: repeat(2,minmax(0,1fr));
+    gap: 9px;
+    align-items: start;
+    padding: 12px;
+    overflow: visible;
+    border: 1px solid var(--mobile-line);
+    border-radius: 20px;
+    background: #fff;
+    box-shadow: 0 8px 24px rgba(8,19,26,.045);
+  }
+
+  .batch-index {
+    grid-column: 1 / -1;
+    width: max-content;
+    height: 26px;
+    padding: 0 10px;
+    border-radius: 999px;
+    background: var(--navy-deep);
+    color: var(--gold-bright);
+    font-size: 7px;
+    letter-spacing: .08em;
+  }
+
+  .batch-index::before {
+    content: "ENTRY ";
+  }
+
+  .batch-field {
+    min-width: 0;
+    gap: 4px;
+  }
+
+  .batch-field label {
+    font-size: 6px;
+    letter-spacing: .075em;
+  }
+
+  .batch-input,
+  .batch-select,
+  .currency-input {
+    min-width: 0;
+    height: 44px;
+    min-height: 44px;
+    border-radius: 12px;
+    border-color: var(--mobile-line);
+    background: var(--mobile-soft);
+    font-size: 11px;
+  }
+
+  .batch-input[readonly] {
+    background: #f0efea;
+  }
+
+  .account-warning,
+  .bulk-warning {
+    min-height: 10px;
+    font-size: 7px;
+  }
+
+  .batch-row-actions {
+    margin-top: 10px;
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .add-row-button {
+    width: 100%;
+    min-height: 44px;
+    justify-content: center;
+    border-color: var(--mobile-line);
+    border-radius: 14px;
+    background: #fff;
+  }
+
+  .batch-row-actions > small {
+    display: none;
+  }
+
+  .process-bar {
+    position: sticky;
+    bottom: 2px;
+    z-index: 30;
+    margin-top: 12px;
+    padding: 8px;
+    display: grid;
+    grid-template-columns: minmax(0,1fr) auto;
+    align-items: center;
+    gap: 8px;
+    border: 1px solid rgba(8,19,26,.08);
+    border-radius: 18px;
+    background: rgba(255,255,255,.96);
+    box-shadow: 0 12px 30px rgba(8,19,26,.12);
+    backdrop-filter: blur(18px);
+  }
+
+  .process-staff-identity {
+    width: auto;
+    min-width: 0;
+    min-height: 46px;
+    padding: 6px 8px;
+    gap: 8px;
+    border: 0;
+    border-radius: 13px;
+    background: var(--mobile-soft);
+    box-shadow: none;
+  }
+
+  .process-staff-seal {
+    width: 30px;
+    height: 30px;
+    border-radius: 10px;
+    font-size: 11px;
+  }
+
+  .process-staff-copy {
+    grid-template-columns: minmax(0,1fr);
+    grid-template-areas:
+      "label"
+      "name";
+    gap: 1px;
+  }
+
+  .process-staff-copy > span {
+    font-size: 5px;
+  }
+
+  .process-staff-copy strong {
+    max-width: none;
+    font-size: 9px;
+  }
+
+  .process-staff-copy small {
+    display: none;
+  }
+
+  .process-button,
+  .process-button.is-processing {
+    width: auto;
+    min-width: 104px;
+    min-height: 46px;
+    padding: 10px 12px;
+    font-size: 8px;
+    border-radius: 13px;
+  }
+
+  /* ---------- Transaction Inputs: mobile report cards ---------- */
+  .report-actions {
+    display: grid;
+    grid-template-columns: repeat(2,minmax(0,1fr));
+    gap: 7px;
+    justify-content: stretch;
+  }
+
+  .report-actions > *,
+  .report-actions input,
+  .report-actions .report-search {
+    width: 100%;
+    min-width: 0;
+    min-height: 43px;
+    flex: none;
+  }
+
+  .report-actions .report-search {
+    grid-column: 1 / -1;
+  }
+
+  .report-document {
+    padding: 12px;
+    border-radius: 20px;
+    border-color: var(--mobile-line);
+    box-shadow: 0 8px 24px rgba(8,19,26,.05);
+  }
+
+  .report-letterhead {
+    display: grid;
+    grid-template-columns: minmax(0,1fr) auto;
+    gap: 8px;
+    padding-bottom: 10px;
+  }
+
+  .report-letterhead span {
+    font-size: 7px;
+  }
+
+  .report-letterhead strong {
+    font-family: "Inter", sans-serif;
+    font-size: 12px;
+  }
+
+  .report-letterhead > div:last-child {
+    font-size: 9px;
+  }
+
+  .report-document .table-wrap {
+    overflow: visible;
+  }
+
+  .report-table {
+    display: block;
+    width: 100%;
+    min-width: 0;
+    margin-top: 10px;
+  }
+
+  .report-table thead {
+    display: none;
+  }
+
+  .report-table tbody {
+    display: grid;
+    gap: 8px;
+  }
+
+  .report-table tr {
+    display: grid;
+    grid-template-columns: minmax(0,1fr) auto;
+    gap: 5px 10px;
+    padding: 11px;
+    border: 1px solid var(--mobile-line);
+    border-radius: 16px;
+    background: var(--mobile-soft);
+  }
+
+  .report-table td {
+    min-width: 0;
+    padding: 0;
+    border: 0;
+    font-size: 9px;
+  }
+
+  .report-table td::before {
+    display: block;
+    margin-bottom: 1px;
+    color: #a3a09a;
+    font-size: 5px;
+    font-weight: 800;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+  }
+
+  .report-table td:nth-child(1)::before { content: "Date"; }
+  .report-table td:nth-child(2)::before { content: "Account"; }
+  .report-table td:nth-child(3)::before { content: "Name"; }
+  .report-table td:nth-child(4)::before { content: "Description"; }
+  .report-table td:nth-child(5)::before { content: "Staff"; }
+  .report-table td:nth-child(6)::before { content: "Amount"; }
+
+  .report-table td:nth-child(4),
+  .report-table td:nth-child(5),
+  .report-table td:nth-child(7) {
+    grid-column: 1 / -1;
+  }
+
+  .report-table td:nth-child(6) {
+    text-align: right;
+  }
+
+  .report-action-col {
+    width: auto;
+  }
+
+  .action-buttons {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 6px;
+  }
+
+  .action-buttons button {
+    min-height: 36px;
+    border-radius: 11px;
+    background: #fff;
+  }
+
+  /* ---------- All Accounts: cards, no horizontal table ---------- */
+  .all-account-tools {
+    display: grid;
+    grid-template-columns: minmax(0,1fr) minmax(120px,.55fr);
+    gap: 7px;
+    justify-content: stretch;
+  }
+
+  .all-account-tools input,
+  .all-account-tools select {
+    width: 100%;
+    min-width: 0;
+    min-height: 44px;
+    border-color: var(--mobile-line);
+    border-radius: 14px;
+    background: #fff;
+    font-size: 10px;
+  }
+
+  .account-summary-grid {
+    grid-template-columns: repeat(2,minmax(0,1fr));
+    gap: 8px;
+    margin-bottom: 10px;
+  }
+
+  .summary-card {
+    min-height: 92px;
+    padding: 14px;
+    border-color: var(--mobile-line);
+    border-radius: 18px;
+    background: #fff;
+    box-shadow: 0 7px 20px rgba(8,19,26,.04);
+  }
+
+  .summary-card span {
+    font-size: 6px;
+  }
+
+  .summary-card strong {
+    font-family: "Inter", sans-serif;
+    font-size: 24px;
+    letter-spacing: -.04em;
+  }
+
+  .all-accounts-table-card {
+    padding: 12px;
+    border-color: var(--mobile-line);
+    border-radius: 20px;
+    background: #fff;
+    box-shadow: 0 8px 24px rgba(8,19,26,.05);
+  }
+
+  .all-accounts-table-head {
+    align-items: center;
+    padding-bottom: 10px;
+  }
+
+  .all-accounts-table-head h4 {
+    font-family: "Inter", sans-serif;
+    font-size: 18px;
+    letter-spacing: -.025em;
+  }
+
+  .all-accounts-table-head > span {
+    font-size: 8px;
+  }
+
+  .all-accounts-table-card .table-wrap {
+    overflow: visible;
+  }
+
+  .all-accounts-table {
+    display: block;
+    width: 100%;
+    min-width: 0;
+  }
+
+  .all-accounts-table thead {
+    display: none;
+  }
+
+  .all-accounts-table tbody {
+    display: grid;
+    gap: 8px;
+  }
+
+  .all-accounts-table tr {
+    display: grid;
+    grid-template-columns: minmax(0,1fr) auto;
+    grid-template-areas:
+      "name balance"
+      "account balance"
+      "status x"
+      "kanji x";
+    gap: 2px 9px;
+    align-items: center;
+    padding: 11px;
+    border: 1px solid var(--mobile-line);
+    border-radius: 16px;
+    background: var(--mobile-soft);
+  }
+
+  .all-accounts-table td {
+    min-width: 0;
+    padding: 0;
+    border: 0;
+    font-size: 9px;
+  }
+
+  .all-accounts-table td:nth-child(1) { grid-area: account; }
+  .all-accounts-table td:nth-child(2) { grid-area: name; }
+  .all-accounts-table td:nth-child(3) { grid-area: kanji; color: var(--muted); font-size: 8px; }
+  .all-accounts-table td:nth-child(4) { grid-area: status; margin-top: 5px; }
+  .all-accounts-table td:nth-child(5) { grid-area: x; justify-self: end; align-self: end; }
+  .all-accounts-table td:nth-child(6) { grid-area: balance; align-self: start; font-size: 10px; }
+
+  .account-name-link {
+    display: block;
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: 11px;
+    font-weight: 800;
+  }
+
+  .account-number-link {
+    font-size: 8px;
+    color: var(--muted);
+  }
+
+  .directory-status {
+    min-height: 23px;
+    padding: 4px 7px;
+    font-size: 6px;
+  }
+
+  .loading-overlay {
+    z-index: 500;
+  }
+}
+
+@media (max-width: 430px) {
+  .topbar,
+  body.home-view-active .topbar {
+    padding-inline: 12px;
+  }
+
+  .brand-copy strong {
+    font-size: 15px;
+  }
+
+  .teller-entry {
+    max-width: 112px;
+    padding-inline: 9px;
+    font-size: 7px;
+  }
+
+  .welcome-view {
+    width: calc(100% - 18px);
+    margin-block: 9px;
+    border-radius: 26px;
+  }
+
+  .account-view {
+    padding-inline: 9px;
+  }
+
+  .balance-card {
+    min-height: 190px;
+    padding: 19px;
+  }
+
+  .identity-card {
+    grid-template-columns: 68px minmax(0,1fr);
+    gap: 11px;
+    padding: 13px;
+  }
+
+  .photo-frame {
+    width: 68px;
+    height: 68px;
+  }
+
+  .identity-meta {
+    grid-template-columns: 1fr;
+    gap: 6px;
+  }
+
+
+  .section-heading {
+    grid-template-columns: 1fr;
+  }
+
+  .ledger-filter-tools {
+    grid-template-columns: minmax(0,1fr) 38px;
+    width: 100%;
+  }
+
+  .ledger-filter-tools > #transactionCount {
+    justify-self: start;
+  }
+
+  .ledger-table tr {
+    grid-template-columns: 40px minmax(0,1fr) auto;
+    column-gap: 8px;
+  }
+
+  .ledger-table td:nth-child(2) {
+    width: 38px;
+    height: 38px;
+  }
+
+  .ledger-table td:nth-child(5) {
+    min-width: 68px;
+    font-size: 10px;
+  }
+
+  .panel-controls {
+    grid-template-columns: 1fr;
+  }
+
+  .panel-controls .row-count-control {
+    grid-column: auto;
+  }
+
+  .batch-row,
+  .batch-row.last-saldo,
+  .batch-row.transfer,
+  .batch-row.provider {
+    grid-template-columns: 1fr;
+  }
+
+  .batch-index {
+    grid-column: auto;
+  }
+
+  .process-bar {
+    grid-template-columns: minmax(0,1fr) 98px;
+  }
+
+  .process-button,
+  .process-button.is-processing {
+    min-width: 0;
+    width: 98px;
+    padding-inline: 8px;
+  }
+
+  .all-account-tools {
+    grid-template-columns: 1fr;
+  }
+
+  .mobile-app-nav {
+    left: 7px;
+    right: 7px;
+  }
+
+  .mobile-app-nav-button {
+    font-size: 7px;
+  }
+}
+
+/* =========================================================
+   MOBILE PREMIUM POLISH — 2026-08-26
+   MOBILE ONLY. Desktop layout and application logic are
+   intentionally untouched.
+========================================================= */
+@media (max-width: 780px) {
+  /* -------------------------------------------------------
+     1) PUBLIC HEADER — remove repetitive teller shortcut.
+        Teller remains available from the mobile bottom nav.
+  ------------------------------------------------------- */
+  .topbar,
+  body.home-view-active .topbar {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 8px;
+    min-height: 64px;
+    padding: 10px 16px;
+  }
+
+  .teller-entry {
+    display: none !important;
+  }
+
+  .account-search {
+    grid-column: 1;
+    width: 100%;
+    margin-top: 2px;
+  }
+
+  .brand {
+    width: max-content;
+    max-width: 100%;
+  }
+
+  /* -------------------------------------------------------
+     2) HOME — simpler, cleaner banking landing screen.
+        Header already carries the logo/brand, so the large
+        duplicate emblem and trust chips are removed.
+  ------------------------------------------------------- */
+  .welcome-view {
+    width: calc(100% - 20px);
+    min-height: calc(100svh - 64px - var(--mobile-nav-height) - 22px);
+    margin: 10px auto 12px;
+    padding: 30px 18px 25px;
+    justify-content: flex-end;
+    border-radius: 28px;
+    text-align: left;
+    box-shadow: 0 18px 48px rgba(8,19,26,.18);
+  }
+
+  .welcome-art-frame::before {
+    background:
+      linear-gradient(180deg,
+        rgba(5,15,22,.08) 0%,
+        rgba(5,15,22,.12) 34%,
+        rgba(5,15,22,.48) 64%,
+        rgba(5,15,22,.90) 100%),
+      linear-gradient(90deg, rgba(5,15,22,.20), transparent 68%);
+  }
+
+  .welcome-art-frame::after {
+    inset: 9px;
+    border-radius: 20px;
+    border-color: rgba(243,214,117,.20);
+  }
+
+  .welcome-art-frame img {
+    object-position: 54% center;
+    filter: saturate(.86) contrast(1.03) brightness(.94);
+  }
+
+  .welcome-emblem,
+  .trust-row {
+    display: none !important;
+  }
+
+  .welcome-view > .eyebrow {
+    margin: 0;
+    font-size: 7.5px;
+    line-height: 1.3;
+    letter-spacing: .17em;
+    color: var(--gold-bright);
+  }
+
+  .welcome-copy {
+    width: min(345px, 100%);
+    margin: 9px 0 0;
+    font-size: 14px;
+    line-height: 1.55;
+    color: rgba(255,250,232,.88);
+    text-shadow: 0 2px 14px rgba(0,0,0,.26);
+  }
+
+  .hero-search {
+    width: 100%;
+    margin-top: 20px;
+    display: grid;
+    grid-template-columns: minmax(0,1fr) 124px;
+    gap: 5px;
+    padding: 5px;
+    border: 1px solid rgba(255,255,255,.34);
+    border-radius: 17px;
+    background: rgba(255,255,255,.96);
+    box-shadow: 0 14px 34px rgba(0,0,0,.20);
+    backdrop-filter: blur(18px);
+  }
+
+  .hero-search input {
+    min-width: 0;
+    min-height: 48px;
+    padding: 10px 12px;
+    text-align: left;
+    font-size: 13px;
+    letter-spacing: .075em;
+    color: var(--navy-deep);
+  }
+
+  .hero-search button {
+    min-width: 0;
+    min-height: 48px;
+    width: 100%;
+    padding: 10px 8px;
+    border-radius: 12px;
+    font-size: 8px;
+    line-height: 1.2;
+    letter-spacing: .08em;
+    background: linear-gradient(135deg, #0c202b, #193542);
+    color: var(--gold-bright);
+  }
+
+  /* -------------------------------------------------------
+     3) ACCOUNT HOLDER — portrait-forward, balanced profile.
+        No data/markup is changed; this is layout only.
+  ------------------------------------------------------- */
+  .identity-card {
+    display: grid;
+    grid-template-columns: 94px minmax(0,1fr);
+    gap: 16px;
+    align-items: start;
+    padding: 18px;
+    border-radius: 24px;
+    background: rgba(255,255,255,.96);
+    border-color: rgba(8,19,26,.07);
+    box-shadow: 0 12px 34px rgba(8,19,26,.08);
+  }
+
+  .photo-frame {
+    width: 94px;
+    height: 116px;
+    aspect-ratio: auto;
+    padding: 4px;
+    align-self: start;
+    justify-self: start;
+    border-radius: 20px;
+    box-shadow: 0 12px 28px rgba(8,19,26,.16);
+  }
+
+  .photo-frame::before {
+    inset: 2px;
+    border-radius: 17px;
+  }
+
+  .photo-frame::after {
+    inset: 7px;
+    border-radius: 12px;
+  }
+
+  .photo-frame img {
+    height: 100%;
+    border-radius: 14px;
+    object-position: center 24%;
+  }
+
+  .status-badge {
+    left: 8px;
+    right: 8px;
+    bottom: 8px;
+    max-width: none;
+    padding: 5px 6px;
+    border-radius: 999px;
+    font-size: 6px;
+    line-height: 1;
+    letter-spacing: .09em;
+    text-align: center;
+  }
+
+  .identity-copy {
+    min-width: 0;
+    padding-top: 2px;
+    text-align: left;
+  }
+
+  .identity-copy > .eyebrow {
+    font-size: 7px;
+    letter-spacing: .15em;
+  }
+
+  .identity-copy h2 {
+    margin: 4px 0 2px;
+    font-family: "Inter", sans-serif;
+    font-size: clamp(22px, 6.4vw, 28px);
+    line-height: 1.08;
+    font-weight: 750;
+    letter-spacing: -.035em;
+  }
+
+  .identity-copy h2 .profile-ledger-link {
+    white-space: normal;
+    overflow: visible;
+    text-overflow: clip;
+  }
+
+  .kanji-name {
+    margin: 0 0 12px;
+    font-size: 14px;
+    line-height: 1.25;
+  }
+
+  .identity-meta {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0,1fr));
+    gap: 8px;
+    padding-top: 0;
+    border-top: 0;
+  }
+
+  .identity-meta div {
+    min-width: 0;
+    gap: 4px;
+    padding: 9px 10px;
+    border: 1px solid rgba(8,19,26,.055);
+    border-radius: 13px;
+    background: #f7f6f1;
+  }
+
+  .identity-meta span {
+    font-size: 6px;
+    line-height: 1.2;
+    letter-spacing: .10em;
+  }
+
+  .identity-meta strong,
+  .identity-meta a {
+    display: block;
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: 9.5px;
+    line-height: 1.25;
+  }
+
+  /* -------------------------------------------------------
+     4) TELLER DESK — tighter hierarchy, calmer proportions.
+  ------------------------------------------------------- */
+  .workspace-header {
+    min-height: 60px;
+    padding: 10px 14px;
+  }
+
+  .workspace-header > div {
+    gap: 2px;
+  }
+
+  .workspace-header .eyebrow {
+    font-size: 5.5px;
+    letter-spacing: .14em;
+  }
+
+  .mobile-workspace-title {
+    font-family: "Cormorant Garamond", serif;
+    font-size: 25px;
+    line-height: 1;
+    font-weight: 600;
+    letter-spacing: -.02em;
+  }
+
+  .workspace-close {
+    min-height: 34px;
+    padding: 7px 10px;
+    border-radius: 11px;
+    font-size: 6.5px;
+    letter-spacing: .08em;
+  }
+
+  .mobile-workspace-user {
+    grid-template-columns: 34px minmax(0,1fr) auto;
+    gap: 9px;
+    margin: 8px 12px 0;
+    padding: 8px 9px;
+    border-radius: 16px;
+    box-shadow: 0 6px 18px rgba(8,19,26,.04);
+  }
+
+  .mobile-workspace-avatar {
+    width: 34px;
+    height: 34px;
+    border-radius: 11px;
+    font-size: 13px;
+  }
+
+  .mobile-workspace-user-copy span {
+    font-size: 5.5px;
+  }
+
+  .mobile-workspace-user-copy strong {
+    font-size: 10.5px;
+  }
+
+  .mobile-workspace-user-copy small {
+    padding: 4px 6px;
+    font-size: 6.5px;
+  }
+
+  #mobileTellerLogoutButton {
+    min-height: 32px;
+    padding: 6px 8px;
+    font-size: 6.5px;
+  }
+
+  .workspace-content {
+    padding: 13px 12px 98px;
+  }
+
+  .panel-description,
+  .report-heading,
+  .accounts-heading {
+    gap: 10px;
+    margin-bottom: 11px;
+  }
+
+  .panel-description h3 {
+    margin: 0;
+    font-family: "Inter", sans-serif;
+    font-size: 21px;
+    line-height: 1.14;
+    letter-spacing: -.03em;
+  }
+
+  .panel-description p {
+    margin: 5px 0 0;
+    font-size: 10px;
+    line-height: 1.48;
+    color: #77766f;
+  }
+
+  .panel-controls {
+    gap: 9px;
+    padding: 10px;
+    border-radius: 18px;
+    background: rgba(255,255,255,.97);
+    box-shadow: 0 6px 20px rgba(8,19,26,.035);
+  }
+
+  .mode-control > span,
+  .description-mode-control > span,
+  .row-count-control label,
+  .bulk-field > span {
+    font-size: 6.5px;
+    line-height: 1.2;
+    letter-spacing: .10em;
+  }
+
+  .mode-switch {
+    padding: 3px;
+    border-radius: 12px;
+  }
+
+  .mode-option {
+    min-height: 36px;
+    padding: 7px 5px;
+    border-radius: 9px;
+    font-size: 6.5px;
+    letter-spacing: .055em;
+  }
+
+  .panel-controls .row-count-control {
+    grid-template-columns: minmax(0,1fr) 88px;
+    min-height: 42px;
+    padding-top: 1px;
+  }
+
+  .row-count-input {
+    width: 88px;
+    min-height: 40px;
+    border-radius: 11px;
+    font-size: 14px;
+  }
+
+  .bulk-config,
+  .single-desc-config {
+    gap: 10px;
+    padding: 13px;
+    border-radius: 18px;
+  }
+
+  .bulk-config {
+    background:
+      radial-gradient(circle at 95% 0%, rgba(243,214,117,.10), transparent 32%),
+      linear-gradient(135deg, #0b1d27, #17303b);
+  }
+
+  .bulk-config-copy {
+    gap: 3px;
+  }
+
+  .bulk-config-copy > span,
+  .single-desc-copy > span,
+  .single-desc-field > span {
+    font-size: 6.5px;
+    letter-spacing: .12em;
+  }
+
+  .bulk-config-copy > strong {
+    font-size: 17px;
+    line-height: 1.14;
+  }
+
+  .bulk-config-copy > small,
+  .single-desc-copy > small {
+    font-size: 8.5px;
+    line-height: 1.45;
+  }
+
+  .bulk-source-fields {
+    gap: 8px;
+  }
+
+  .bulk-field .batch-input,
+  .bulk-field .batch-select,
+  .single-desc-field .batch-input {
+    height: 44px;
+    min-height: 44px;
+    border-radius: 12px;
+    font-size: 10.5px;
+  }
+
+  .batch-grid {
+    gap: 9px;
+  }
+
+  .batch-row,
+  .batch-row.last-saldo,
+  .batch-row.transfer,
+  .batch-row.provider {
+    gap: 9px;
+    padding: 11px;
+    border-radius: 18px;
+    box-shadow: 0 6px 20px rgba(8,19,26,.035);
+  }
+
+  .batch-index {
+    height: 24px;
+    padding: 0 9px;
+    font-size: 6.5px;
+  }
+
+  .batch-field label {
+    font-size: 6px;
+    letter-spacing: .07em;
+  }
+
+  .batch-input,
+  .batch-select,
+  .currency-input {
+    height: 43px;
+    min-height: 43px;
+    border-radius: 11px;
+    font-size: 10.5px;
+  }
+
+  .batch-row-actions {
+    margin-top: 9px;
+  }
+
+  .add-row-button {
+    min-height: 42px;
+    border-radius: 13px;
+    font-size: 7px;
+  }
+
+  /* -------------------------------------------------------
+     5) INPUT STAFF / PROCESS — normal document flow.
+        It no longer floats over forms or bulk configuration.
+  ------------------------------------------------------- */
+  .process-bar {
+    position: static;
+    inset: auto;
+    z-index: auto;
+    margin: 13px 0 2px;
+    padding: 9px;
+    display: grid;
+    grid-template-columns: minmax(0,1fr) 112px;
+    align-items: center;
+    gap: 8px;
+    border-radius: 18px;
+    background: #fff;
+    box-shadow: 0 7px 22px rgba(8,19,26,.055);
+    backdrop-filter: none;
+  }
+
+  .process-staff-identity {
+    min-width: 0;
+    min-height: 48px;
+    padding: 7px 8px;
+    gap: 8px;
+    border: 1px solid rgba(8,19,26,.05);
+    border-radius: 13px;
+    background: #f7f6f1;
+  }
+
+  .process-staff-seal {
+    width: 31px;
+    height: 31px;
+    border-radius: 10px;
+    font-size: 11px;
+  }
+
+  .process-staff-copy {
+    grid-template-columns: minmax(0,1fr);
+    grid-template-areas:
+      "label"
+      "name";
+    gap: 2px;
+  }
+
+  .process-staff-copy > span {
+    font-size: 5.5px;
+    letter-spacing: .10em;
+  }
+
+  .process-staff-copy strong {
+    max-width: 100%;
+    font-size: 9.5px;
+    line-height: 1.2;
+  }
+
+  .process-staff-copy small {
+    display: none;
+  }
+
+  .process-button,
+  .process-button.is-processing {
+    width: 112px;
+    min-width: 112px;
+    min-height: 48px;
+    padding: 10px 9px;
+    border-radius: 13px;
+    font-size: 7.5px;
+    letter-spacing: .09em;
+  }
+
+  /* Bottom teller navigation remains the only floating teller control. */
+  .workspace-sidebar {
+    height: 68px;
+    border-radius: 21px;
+  }
+
+  .teller-nav button {
+    flex-basis: 98px;
+    height: 54px;
+    font-size: 6.5px;
+  }
+}
+
+@media (max-width: 430px) {
+  .topbar,
+  body.home-view-active .topbar {
+    padding-inline: 13px;
+  }
+
+  .welcome-view {
+    width: calc(100% - 16px);
+    min-height: calc(100svh - 64px - var(--mobile-nav-height) - 18px);
+    margin: 8px auto 10px;
+    padding: 26px 15px 21px;
+    border-radius: 25px;
+  }
+
+  .welcome-copy {
+    width: min(320px, 100%);
+    font-size: 13px;
+  }
+
+  .hero-search {
+    grid-template-columns: minmax(0,1fr) 112px;
+    margin-top: 17px;
+  }
+
+  .hero-search input {
+    font-size: 12px;
+  }
+
+  .hero-search button {
+    font-size: 7.5px;
+  }
+
+  .identity-card {
+    grid-template-columns: 86px minmax(0,1fr);
+    gap: 12px;
+    padding: 14px;
+  }
+
+  .photo-frame {
+    width: 86px;
+    height: 108px;
+  }
+
+  .identity-copy h2 {
+    font-size: clamp(20px, 6vw, 25px);
+  }
+
+  .identity-meta {
+    grid-template-columns: repeat(2, minmax(0,1fr));
+    gap: 6px;
+  }
+
+  .identity-meta div {
+    padding: 8px;
+  }
+
+  .identity-meta strong,
+  .identity-meta a {
+    font-size: 8.5px;
+  }
+
+  .panel-description h3 {
+    font-size: 20px;
+  }
+
+  .panel-controls {
+    grid-template-columns: 1fr;
+  }
+
+  .panel-controls .row-count-control {
+    grid-column: auto;
+  }
+
+  .process-bar {
+    grid-template-columns: minmax(0,1fr) 104px;
+    padding: 8px;
+  }
+
+  .process-button,
+  .process-button.is-processing {
+    width: 104px;
+    min-width: 104px;
+  }
+}
+
+/* =========================================================
+   ZAIGEN INPUT UTILITIES + AMOUNT MODES — V3
+   Requested additions. Existing desktop design remains intact;
+   only the new controls receive desktop styling here.
+========================================================= */
+.amount-mode-control {
+  display: grid;
+  gap: 7px;
+}
+
+.amount-mode-control > span,
+.single-amount-copy > span,
+.single-amount-field > span {
+  font-size: 9px;
+  text-transform: uppercase;
+  letter-spacing: .12em;
+  color: var(--muted);
+  font-weight: 700;
+}
+
+.single-amount-config {
+  margin: 0 0 14px;
+  padding: 14px 16px;
+  display: grid;
+  grid-template-columns: minmax(220px, .8fr) minmax(260px, 1fr);
+  gap: 16px;
+  align-items: center;
+  border: 1px solid rgba(200,154,67,.28);
+  border-radius: 16px;
+  background: linear-gradient(135deg, rgba(255,255,255,.88), rgba(245,239,212,.82));
+  box-shadow: 0 10px 26px rgba(8,19,26,.05);
+}
+
+.single-amount-copy {
+  display: grid;
+  gap: 4px;
+}
+
+.single-amount-copy > span,
+.single-amount-field > span {
+  color: var(--gold-deep);
+  font-weight: 800;
+}
+
+.single-amount-copy > small {
+  color: var(--muted);
+  font-size: 10px;
+  line-height: 1.45;
+}
+
+.single-amount-field {
+  display: grid;
+  gap: 6px;
+}
+
+.single-amount-input-wrap {
+  height: 44px;
+  border-color: rgba(141,100,30,.26);
+  background: rgba(255,255,255,.94);
+}
+
+.teller-panel.single-amount-mode .amount-field {
+  display: none;
+}
+
+.batch-row-leading {
+  min-width: 0;
+  display: grid;
+  justify-items: center;
+  align-content: center;
+  gap: 5px;
+}
+
+.row-clear-button {
+  width: 44px;
+  min-height: 20px;
+  padding: 4px 3px;
+  border: 1px solid rgba(154,64,57,.16);
+  border-radius: 7px;
+  background: rgba(154,64,57,.04);
+  color: var(--red);
+  font-size: 6px;
+  line-height: 1;
+  font-weight: 800;
+  letter-spacing: .05em;
+}
+
+.row-clear-button:hover,
+.row-clear-button:focus-visible {
+  border-color: rgba(154,64,57,.34);
+  background: rgba(154,64,57,.08);
+  outline: none;
+}
+
+.batch-utility-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.clear-all-button,
+.remove-row-button {
+  min-height: 42px;
+  padding: 9px 13px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: rgba(255,255,255,.76);
+  color: var(--navy-deep);
+  font-size: 8px;
+  font-weight: 800;
+  letter-spacing: .08em;
+  box-shadow: 0 8px 20px rgba(8,19,26,.04);
+}
+
+.clear-all-button {
+  color: var(--red);
+  border-color: rgba(154,64,57,.18);
+}
+
+.remove-row-button:hover,
+.clear-all-button:hover,
+.remove-row-button:focus-visible,
+.clear-all-button:focus-visible {
+  outline: none;
+  transform: translateY(-1px);
+}
+
+.process-staff-seal,
+.mobile-workspace-avatar {
+  object-fit: cover;
+  object-position: center 24%;
+  overflow: hidden;
+}
+
+.process-staff-seal {
+  display: block;
+  padding: 0;
+  background: #e8e5dc;
+}
+
+.account-photo-cell,
+.account-directory-photo,
+.teller-nav-swipe-hint {
+  display: none;
+}
+
+/* =========================================================
+   MOBILE PREMIUM BALANCE — V3
+========================================================= */
+@media (max-width: 780px) {
+  /* ENTRY 01 stays on one line and clear-row is easy to reach. */
+  .batch-row-leading {
+    grid-column: 1 / -1;
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+  }
+
+  .batch-index {
+    grid-column: auto;
+    flex: 0 0 auto;
+    width: auto;
+    min-width: 72px;
+    max-width: none;
+    height: 26px;
+    padding: 0 11px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    white-space: nowrap;
+    overflow: visible;
+    line-height: 1;
+  }
+
+  .batch-index::before {
+    display: inline;
+    white-space: nowrap;
+  }
+
+  .row-clear-button {
+    width: auto;
+    min-width: 58px;
+    min-height: 27px;
+    padding: 6px 9px;
+    border-radius: 9px;
+    background: rgba(154,64,57,.045);
+    font-size: 6px;
+  }
+
+  /* Amount mode joins the existing Mode/Description system cleanly. */
+  .panel-controls .amount-mode-control {
+    grid-column: 1 / -1;
+    min-width: 0;
+    display: grid;
+    gap: 5px;
+  }
+
+  .amount-mode-control > span {
+    font-size: 6.5px;
+    line-height: 1.2;
+    letter-spacing: .10em;
+  }
+
+  .single-amount-config {
+    grid-template-columns: 1fr;
+    gap: 9px;
+    margin: 0 0 10px;
+    padding: 12px;
+    border-radius: 17px;
+    background: linear-gradient(135deg, rgba(255,255,255,.96), rgba(248,246,238,.96));
+    box-shadow: 0 6px 18px rgba(8,19,26,.035);
+  }
+
+  .single-amount-copy {
+    gap: 2px;
+  }
+
+  .single-amount-copy > span,
+  .single-amount-field > span {
+    font-size: 6.5px;
+    letter-spacing: .11em;
+  }
+
+  .single-amount-copy > small {
+    font-size: 8.5px;
+    line-height: 1.42;
+  }
+
+  .single-amount-input-wrap {
+    height: 44px;
+    min-height: 44px;
+    border-radius: 12px;
+    background: #fff;
+  }
+
+  /* Add / clear all / remove row sit together as one compact toolbar. */
+  .batch-row-actions {
+    width: 100%;
+    margin-top: 10px;
+    display: grid;
+    grid-template-columns: minmax(0,1fr) minmax(0,1.72fr);
+    gap: 7px;
+    align-items: stretch;
+  }
+
+  .batch-row-actions .add-row-button {
+    width: 100%;
+    min-width: 0;
+    min-height: 42px;
+    padding: 8px 7px;
+    font-size: 6.4px;
+    letter-spacing: .055em;
+  }
+
+  .batch-row-actions .add-row-button span {
+    width: 22px;
+    height: 22px;
+    border-radius: 7px;
+    font-size: 14px;
+  }
+
+  .batch-utility-actions {
+    width: 100%;
+    min-width: 0;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0,1fr));
+    gap: 7px;
+  }
+
+  .clear-all-button,
+  .remove-row-button {
+    width: 100%;
+    min-width: 0;
+    min-height: 42px;
+    padding: 7px 5px;
+    border-radius: 12px;
+    background: #fff;
+    font-size: 6px;
+    line-height: 1.2;
+    letter-spacing: .045em;
+    box-shadow: none;
+  }
+
+  /* Staff checkpoint becomes the actual staff photo. */
+  .mobile-workspace-avatar {
+    display: block;
+    padding: 2px;
+    border: 1px solid rgba(200,154,67,.28);
+    background: linear-gradient(145deg, #0c202b, #1d303b);
+    box-shadow: 0 5px 14px rgba(8,19,26,.12);
+  }
+
+  .process-staff-seal {
+    border-radius: 10px;
+    border: 1px solid rgba(200,154,67,.20);
+    box-shadow: 0 4px 10px rgba(8,19,26,.10);
+  }
+
+  /* Swipe discoverability for the teller menu. */
+  .workspace-sidebar {
+    overflow: visible;
+  }
+
+  .teller-nav-swipe-hint {
+    position: absolute;
+    top: -17px;
+    right: 14px;
+    z-index: 3;
+    min-height: 19px;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 4px 8px;
+    border: 1px solid rgba(8,19,26,.08);
+    border-radius: 999px;
+    background: rgba(255,255,255,.96);
+    color: #8b8f94;
+    box-shadow: 0 6px 16px rgba(8,19,26,.08);
+    backdrop-filter: blur(12px);
+    pointer-events: none;
+  }
+
+  .teller-nav-swipe-hint span {
+    font-size: 5.5px;
+    line-height: 1;
+    font-weight: 800;
+    letter-spacing: .08em;
+  }
+
+  .teller-nav-swipe-hint b {
+    color: var(--gold-deep);
+    font-size: 10px;
+    line-height: 1;
+  }
+
+  .teller-nav {
+    padding-right: 15px;
+    background:
+      linear-gradient(90deg, transparent 0, transparent calc(100% - 24px), rgba(255,255,255,.88) 100%);
+  }
+
+  /* -------------------------------------------------------
+     TRANSACTION INPUTS — cleaner visual rhythm
+  ------------------------------------------------------- */
+  #reportsPanel .report-heading {
+    gap: 10px;
+    margin-bottom: 10px;
+  }
+
+  #reportsPanel .report-heading > div:first-child {
+    padding: 2px 1px 0;
+  }
+
+  #reportsPanel .report-heading h3 {
+    font-size: 22px;
+    line-height: 1.1;
+    letter-spacing: -.03em;
+  }
+
+  #reportsPanel .report-heading p {
+    max-width: 360px;
+    margin-top: 5px;
+    font-size: 9.5px;
+    line-height: 1.45;
+  }
+
+  #reportsPanel .report-actions {
+    display: grid;
+    grid-template-columns: minmax(0,1fr) minmax(0,.95fr);
+    gap: 7px;
+    padding: 9px;
+    border: 1px solid rgba(8,19,26,.07);
+    border-radius: 18px;
+    background: rgba(255,255,255,.97);
+    box-shadow: 0 7px 20px rgba(8,19,26,.035);
+  }
+
+  #reportsPanel .report-actions > *,
+  #reportsPanel .report-actions input,
+  #reportsPanel .report-actions .report-search {
+    min-height: 42px;
+  }
+
+  #reportsPanel #reportMonth {
+    padding-inline: 12px;
+    border-radius: 12px;
+    background: #f8f7f2;
+    font-size: 11px;
+    font-weight: 650;
+  }
+
+  #reportsPanel #loadReportButton {
+    border-radius: 12px;
+    background: linear-gradient(135deg, #0c202b, #193542);
+    color: #fff;
+    border-color: transparent;
+    font-size: 7px;
+    letter-spacing: .08em;
+  }
+
+  #reportsPanel .report-search {
+    grid-column: 1 / -1;
+  }
+
+  #reportsPanel .report-search input {
+    min-height: 42px;
+    padding: 9px 42px 9px 12px;
+    border-radius: 12px;
+    background: #f8f7f2;
+    font-size: 10.5px;
+  }
+
+  #reportsPanel .report-search-icon {
+    right: 5px;
+    width: 32px;
+    height: 32px;
+  }
+
+  #reportsPanel #exportPdfButton,
+  #reportsPanel #exportPngButton {
+    min-height: 40px;
+    border-radius: 12px;
+    background: #fff;
+    font-size: 7px;
+    letter-spacing: .09em;
+  }
+
+  #reportsPanel .report-document {
+    padding: 13px;
+    border-radius: 21px;
+    background: rgba(255,255,255,.98);
+    box-shadow: 0 9px 24px rgba(8,19,26,.045);
+  }
+
+  #reportsPanel .report-letterhead {
+    grid-template-columns: minmax(0,1fr) auto;
+    align-items: end;
+    gap: 10px;
+    padding: 2px 0 11px;
+  }
+
+  #reportsPanel .report-letterhead > div:first-child {
+    gap: 3px;
+  }
+
+  #reportsPanel .report-letterhead span {
+    font-size: 6.5px;
+    letter-spacing: .14em;
+  }
+
+  #reportsPanel .report-letterhead strong {
+    max-width: 245px;
+    font-size: 11.5px;
+    line-height: 1.25;
+    letter-spacing: .01em;
+  }
+
+  #reportsPanel .report-letterhead > div:last-child {
+    align-self: center;
+    padding: 5px 7px;
+    border-radius: 999px;
+    background: #f5f2e9;
+    font-size: 7.5px;
+    white-space: nowrap;
+  }
+
+  #reportsPanel .report-table tbody {
+    gap: 7px;
+  }
+
+  #reportsPanel .report-table tr {
+    gap: 6px 11px;
+    padding: 11px 12px;
+    border-radius: 15px;
+    background: linear-gradient(145deg, #fbfaf6, #f6f4ed);
+  }
+
+  #reportsPanel .report-table td {
+    font-size: 8.6px;
+    line-height: 1.35;
+  }
+
+  #reportsPanel .action-buttons button {
+    min-height: 34px;
+    border-radius: 10px;
+    font-size: 6.5px;
+  }
+
+  /* -------------------------------------------------------
+     ALL ACCOUNTS — compact premium dashboard + customer photo
+  ------------------------------------------------------- */
+  #allAccountsPanel .accounts-heading {
+    gap: 10px;
+    margin-bottom: 10px;
+  }
+
+  #allAccountsPanel .accounts-heading h3 {
+    font-size: 22px;
+    line-height: 1.1;
+  }
+
+  #allAccountsPanel .accounts-heading p {
+    margin-top: 4px;
+    font-size: 9.5px;
+  }
+
+  #allAccountsPanel .all-account-tools {
+    grid-template-columns: minmax(0,1fr) 124px;
+    gap: 7px;
+    padding: 9px;
+    border: 1px solid rgba(8,19,26,.07);
+    border-radius: 18px;
+    background: rgba(255,255,255,.97);
+    box-shadow: 0 7px 20px rgba(8,19,26,.035);
+  }
+
+  #allAccountsPanel .all-account-tools input,
+  #allAccountsPanel .all-account-tools select {
+    min-height: 42px;
+    border-radius: 12px;
+    background: #f8f7f2;
+    font-size: 9.5px;
+  }
+
+  #allAccountsPanel .account-summary-grid {
+    grid-template-columns: repeat(2,minmax(0,1fr));
+    gap: 8px;
+    margin: 0 0 10px;
+  }
+
+  #allAccountsPanel .summary-card {
+    min-height: 82px;
+    padding: 12px 13px;
+    border-radius: 18px;
+    background:
+      radial-gradient(circle at 100% 0%, rgba(200,154,67,.07), transparent 38%),
+      #fff;
+    box-shadow: 0 6px 18px rgba(8,19,26,.035);
+  }
+
+  #allAccountsPanel .summary-card span {
+    font-size: 5.8px;
+    letter-spacing: .12em;
+  }
+
+  #allAccountsPanel .summary-card strong {
+    font-size: clamp(20px, 6.2vw, 27px);
+    line-height: .98;
+    letter-spacing: -.045em;
+    overflow-wrap: anywhere;
+  }
+
+  #allAccountsPanel .summary-card:nth-child(2) strong {
+    font-size: clamp(18px, 5.4vw, 24px);
+  }
+
+  #allAccountsPanel .all-accounts-table-card {
+    padding: 13px;
+    border-radius: 21px;
+  }
+
+  #allAccountsPanel .all-accounts-table-head {
+    min-height: 51px;
+    align-items: center;
+    gap: 8px;
+    padding-bottom: 11px;
+  }
+
+  #allAccountsPanel .all-accounts-table-head .eyebrow {
+    font-size: 6px;
+  }
+
+  #allAccountsPanel .all-accounts-table-head h4 {
+    margin-top: 3px;
+    font-size: 18px;
+    line-height: 1.1;
+  }
+
+  #allAccountsPanel .all-accounts-table-head > span {
+    padding: 5px 7px;
+    border-radius: 999px;
+    background: #f5f2e9;
+    font-size: 7px;
+    white-space: nowrap;
+  }
+
+  #allAccountsPanel .all-accounts-table tbody {
+    gap: 8px;
+  }
+
+  #allAccountsPanel .all-accounts-table tr {
+    grid-template-columns: minmax(0,1fr) 82px;
+    grid-template-areas:
+      "name balance"
+      "account photo"
+      "status photo"
+      "kanji x";
+    gap: 3px 10px;
+    min-height: 106px;
+    padding: 11px 12px;
+    border-radius: 17px;
+    background:
+      radial-gradient(circle at 100% 0%, rgba(200,154,67,.05), transparent 36%),
+      linear-gradient(145deg, #fbfaf6, #f6f4ed);
+  }
+
+  #allAccountsPanel .all-accounts-table td:nth-child(1) { grid-area: account; }
+  #allAccountsPanel .all-accounts-table td:nth-child(2) { grid-area: name; }
+  #allAccountsPanel .all-accounts-table td:nth-child(3) { grid-area: kanji; }
+  #allAccountsPanel .all-accounts-table td:nth-child(4) { grid-area: status; margin-top: 4px; }
+  #allAccountsPanel .all-accounts-table td:nth-child(5) {
+    grid-area: x;
+    justify-self: end;
+    align-self: end;
+    max-width: 82px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: 7.5px;
+  }
+  #allAccountsPanel .all-accounts-table td:nth-child(6) {
+    grid-area: balance;
+    justify-self: end;
+    align-self: start;
+    text-align: right;
+    font-size: 9.5px;
+  }
+  #allAccountsPanel .all-accounts-table td:nth-child(7) {
+    grid-area: photo;
+    justify-self: end;
+    align-self: center;
+    display: block;
+  }
+
+  .account-photo-cell {
+    display: block;
+  }
+
+  .account-directory-photo {
+    width: 48px;
+    height: 48px;
+    display: block;
+    object-fit: cover;
+    object-position: center 24%;
+    border: 2px solid #fff;
+    border-radius: 15px;
+    background: #e8e5dc;
+    box-shadow:
+      0 7px 18px rgba(8,19,26,.12),
+      0 0 0 1px rgba(141,100,30,.15);
+  }
+
+  #allAccountsPanel .account-name-link {
+    font-size: 10.5px;
+    line-height: 1.2;
+  }
+
+  #allAccountsPanel .account-number-link {
+    font-size: 7.5px;
+  }
+
+  #allAccountsPanel .directory-status {
+    min-height: 21px;
+    padding: 4px 7px;
+    font-size: 5.8px;
+  }
+}
+
+@media (max-width: 430px) {
+  .batch-index {
+    min-width: 68px;
+    padding-inline: 9px;
+    font-size: 6.2px;
+  }
+
+  .batch-row-actions {
+    grid-template-columns: minmax(0,.92fr) minmax(0,1.75fr);
+    gap: 6px;
+  }
+
+  .batch-row-actions .add-row-button,
+  .clear-all-button,
+  .remove-row-button {
+    font-size: 5.6px;
+  }
+
+  .teller-nav-swipe-hint {
+    right: 11px;
+  }
+
+  #reportsPanel .report-actions,
+  #allAccountsPanel .all-account-tools {
+    padding: 8px;
+  }
+
+  #allAccountsPanel .all-account-tools {
+    grid-template-columns: minmax(0,1fr) 112px;
+  }
+
+  #allAccountsPanel .all-accounts-table tr {
+    grid-template-columns: minmax(0,1fr) 76px;
+  }
+
+  .account-directory-photo {
+    width: 45px;
+    height: 45px;
+    border-radius: 14px;
+  }
+}
+
+/* Keep the new row controls grouped beside ADD ROW on desktop. */
+@media (min-width: 781px) {
+  .batch-row-actions {
+    justify-content: flex-start;
+    flex-wrap: wrap;
+  }
+
+  .batch-row-actions > small {
+    margin-left: auto;
+  }
+}
+
+/* =========================================================
+   PREMIUM COMPACT REFINEMENT — V4
+   Requested UI-only refinements plus compact recipient batch
+   mode. Existing desktop styling remains unchanged outside
+   the specifically requested new controls / compact state.
+========================================================= */
+
+/* REMOVE ROW now mirrors ADD ROW with its own compact symbol. */
+.remove-row-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  padding-left: 10px;
+}
+
+.remove-row-button > span {
+  flex: 0 0 auto;
+  width: 25px;
+  height: 25px;
+  display: grid;
+  place-items: center;
+  border-radius: 8px;
+  background: var(--navy-deep);
+  color: var(--gold-bright);
+  font-size: 17px;
+  line-height: 1;
+  font-weight: 700;
+}
+
+/* One shared date is used only when BULK + SINGLE DESC + SINGLE AMOUNT
+   are all active. This keeps the backend payload identical while making
+   the input surface much more efficient. */
+.compact-date-config {
+  margin: 0 0 14px;
+  padding: 13px 16px;
+  display: grid;
+  grid-template-columns: minmax(220px, .9fr) minmax(220px, .72fr);
+  align-items: center;
+  gap: 16px;
+  border: 1px solid rgba(200,154,67,.24);
+  border-radius: 16px;
+  background: linear-gradient(135deg, rgba(255,255,255,.90), rgba(245,239,212,.78));
+  box-shadow: 0 10px 26px rgba(8,19,26,.045);
+}
+
+.compact-date-copy,
+.compact-date-field {
+  display: grid;
+  gap: 5px;
+}
+
+.compact-date-copy > span,
+.compact-date-field > span {
+  font-size: 9px;
+  text-transform: uppercase;
+  letter-spacing: .12em;
+  color: var(--gold-deep);
+  font-weight: 800;
+}
+
+.compact-date-copy > small {
+  color: var(--muted);
+  font-size: 10px;
+  line-height: 1.42;
+}
+
+.compact-date-field .batch-input {
+  height: 44px;
+  border-color: rgba(141,100,30,.24);
+  background: rgba(255,255,255,.95);
+}
+
+/* Compact recipient mode is deliberately scoped to the requested mode
+   combination, so STANDARD / MULTI layouts keep their current desktop UI. */
+.teller-panel.compact-recipient-mode .date-field,
+.teller-panel.compact-recipient-mode .bulk-source-field,
+.teller-panel.compact-recipient-mode .recipient-name-field,
+.teller-panel.compact-recipient-mode .amount-field,
+.teller-panel.compact-recipient-mode .description-field {
+  display: none !important;
+}
+
+.teller-panel.compact-recipient-mode .batch-grid {
+  gap: 7px;
+}
+
+.teller-panel.compact-recipient-mode .batch-row,
+.teller-panel.compact-recipient-mode .batch-row.transfer,
+.teller-panel.compact-recipient-mode .batch-row.provider {
+  width: min(780px, 100%);
+  min-width: 0;
+  grid-template-columns: 58px minmax(260px, 1fr);
+  gap: 10px;
+  padding: 9px 11px;
+  overflow: visible;
+  border-radius: 14px;
+}
+
+.teller-panel.compact-recipient-mode .batch-row-leading {
+  display: grid;
+  justify-items: center;
+  align-content: center;
+  gap: 4px;
+}
+
+.teller-panel.compact-recipient-mode .recipient-account-field {
+  min-width: 0;
+  width: 100%;
+}
+
+.teller-panel.compact-recipient-mode .recipient-account-field .batch-input {
+  width: 100%;
+}
+
+.teller-panel.compact-recipient-mode .bulk-config,
+.teller-panel.compact-recipient-mode .single-desc-config,
+.teller-panel.compact-recipient-mode .single-amount-config,
+.teller-panel.compact-recipient-mode .compact-date-config {
+  margin-bottom: 8px;
+}
+
+/* =========================================================
+   MOBILE-ONLY SLEEK / SPACE-EFFICIENT REFINEMENTS
+========================================================= */
+@media (max-width: 780px) {
+  /* 1) HOME — a restrained glass information deck over the hero image. */
+  body.home-view-active .welcome-view {
+    width: calc(100% - 16px);
+    min-height: calc(100svh - 64px - var(--mobile-nav-height) - 18px);
+    margin: 8px auto 10px;
+    padding: 28px 18px 22px;
+    border: 1px solid rgba(255,255,255,.16);
+    border-radius: 30px;
+    box-shadow:
+      0 24px 62px rgba(8,19,26,.22),
+      0 1px 0 rgba(255,255,255,.12) inset;
+  }
+
+  body.home-view-active .welcome-view::before {
+    content: "";
+    position: absolute;
+    left: 11px;
+    right: 11px;
+    bottom: 11px;
+    z-index: 3;
+    height: 214px;
+    display: block;
+    border: 1px solid rgba(255,255,255,.14);
+    border-radius: 23px;
+    background:
+      linear-gradient(145deg, rgba(6,18,26,.58), rgba(6,18,26,.36));
+    box-shadow:
+      0 14px 34px rgba(0,0,0,.16),
+      inset 0 1px 0 rgba(255,255,255,.06);
+    backdrop-filter: blur(11px) saturate(1.04);
+    pointer-events: none;
+  }
+
+  body.home-view-active .welcome-art-frame::before {
+    background:
+      linear-gradient(180deg,
+        rgba(4,13,20,.03) 0%,
+        rgba(4,13,20,.08) 34%,
+        rgba(4,13,20,.32) 67%,
+        rgba(4,13,20,.76) 100%),
+      radial-gradient(circle at 52% 38%, transparent 0 28%, rgba(5,15,22,.10) 72%);
+  }
+
+  body.home-view-active .welcome-art-frame::after {
+    inset: 8px;
+    border-radius: 22px;
+    border-color: rgba(243,214,117,.16);
+  }
+
+  body.home-view-active .welcome-view > .eyebrow {
+    margin-left: 2px;
+    font-size: 6.7px;
+    line-height: 1.2;
+    letter-spacing: .18em;
+  }
+
+  body.home-view-active .welcome-copy {
+    width: min(340px, 100%);
+    margin: 8px 0 0 2px;
+    font-size: 13.2px;
+    line-height: 1.48;
+    letter-spacing: -.01em;
+    color: rgba(255,251,238,.93);
+    text-shadow: 0 2px 12px rgba(0,0,0,.22);
+  }
+
+  body.home-view-active .hero-search {
+    margin-top: 17px;
+    grid-template-columns: minmax(0,1fr) 118px;
+    gap: 4px;
+    padding: 4px;
+    border-color: rgba(255,255,255,.28);
+    border-radius: 16px;
+    background: rgba(255,255,255,.96);
+    box-shadow: 0 10px 28px rgba(0,0,0,.18);
+  }
+
+  body.home-view-active .hero-search input {
+    min-height: 46px;
+    padding: 10px 12px;
+    font-size: 12.5px;
+    letter-spacing: .065em;
+  }
+
+  body.home-view-active .hero-search button {
+    min-height: 46px;
+    padding: 9px 8px;
+    border-radius: 12px;
+    font-size: 7.3px;
+    letter-spacing: .075em;
+    box-shadow: none;
+  }
+
+  /* 2) Transaction Inputs — explicit grid areas eliminate dead space. */
+  #reportsPanel .report-table tr {
+    grid-template-columns: minmax(0,1fr) minmax(0,1fr);
+    grid-template-areas:
+      "report-date report-account"
+      "report-name report-amount"
+      "report-description report-description"
+      "report-staff report-staff"
+      "report-actions report-actions";
+    align-items: start;
+    gap: 6px 12px;
+    padding: 10px 11px;
+  }
+
+  #reportsPanel .report-table td:nth-child(1) { grid-area: report-date; }
+  #reportsPanel .report-table td:nth-child(2) { grid-area: report-account; }
+  #reportsPanel .report-table td:nth-child(3) { grid-area: report-name; }
+  #reportsPanel .report-table td:nth-child(4) { grid-area: report-description; }
+  #reportsPanel .report-table td:nth-child(5) { grid-area: report-staff; }
+  #reportsPanel .report-table td:nth-child(6) {
+    grid-area: report-amount;
+    align-self: start;
+    justify-self: stretch;
+    text-align: right;
+  }
+  #reportsPanel .report-table td:nth-child(7) { grid-area: report-actions; }
+
+  #reportsPanel .report-table td:nth-child(4),
+  #reportsPanel .report-table td:nth-child(5),
+  #reportsPanel .report-table td:nth-child(7) {
+    grid-column: auto;
+  }
+
+  #reportsPanel .report-table td {
+    line-height: 1.28;
+  }
+
+  #reportsPanel .report-table td::before {
+    margin-bottom: 2px;
+  }
+
+  #reportsPanel .action-buttons {
+    margin-top: 2px;
+    gap: 6px;
+  }
+
+  #reportsPanel .action-buttons button {
+    min-height: 32px;
+    padding-block: 7px;
+  }
+
+  /* 3) Teller option matrix — same controls, much less vertical footprint. */
+  .teller-panel .panel-controls {
+    grid-template-columns: 1fr !important;
+    gap: 6px;
+    padding: 8px;
+    border-radius: 16px;
+  }
+
+  .teller-panel .panel-controls .mode-control,
+  .teller-panel .panel-controls .description-mode-control,
+  .teller-panel .panel-controls .amount-mode-control {
+    grid-column: auto;
+    display: grid;
+    grid-template-columns: 72px minmax(0,1fr);
+    align-items: center;
+    gap: 7px;
+  }
+
+  .teller-panel .panel-controls .mode-control > span,
+  .teller-panel .panel-controls .description-mode-control > span,
+  .teller-panel .panel-controls .amount-mode-control > span,
+  .teller-panel .panel-controls .row-count-control label {
+    margin: 0;
+    font-size: 6px;
+    letter-spacing: .09em;
+  }
+
+  .teller-panel .panel-controls .mode-switch {
+    min-height: 32px;
+    padding: 2px;
+    border-radius: 10px;
+  }
+
+  .teller-panel .panel-controls .mode-option {
+    min-height: 28px;
+    padding: 5px 4px;
+    border-radius: 8px;
+    font-size: 5.8px;
+    letter-spacing: .045em;
+  }
+
+  .teller-panel .panel-controls .row-count-control {
+    grid-column: auto;
+    display: grid;
+    grid-template-columns: 72px 74px;
+    justify-content: start;
+    align-items: center;
+    gap: 7px;
+    min-height: 34px;
+    padding: 0;
+  }
+
+  .teller-panel .panel-controls .row-count-input {
+    width: 74px;
+    min-height: 32px;
+    height: 32px;
+    justify-self: start;
+    border-radius: 9px;
+    font-size: 12px;
+  }
+
+  .teller-panel .bulk-config,
+  .teller-panel .single-desc-config,
+  .teller-panel .single-amount-config,
+  .teller-panel .compact-date-config {
+    gap: 7px;
+    padding: 10px;
+    border-radius: 15px;
+  }
+
+  .teller-panel .bulk-config-copy > strong {
+    font-size: 15px;
+  }
+
+  .teller-panel .bulk-config-copy > small,
+  .teller-panel .single-desc-copy > small,
+  .teller-panel .single-amount-copy > small,
+  .teller-panel .compact-date-copy > small {
+    font-size: 7.7px;
+    line-height: 1.38;
+  }
+
+  .teller-panel .bulk-field .batch-input,
+  .teller-panel .bulk-field .batch-select,
+  .teller-panel .single-desc-field .batch-input,
+  .teller-panel .single-amount-input-wrap,
+  .teller-panel .compact-date-field .batch-input {
+    min-height: 40px;
+    height: 40px;
+    border-radius: 10px;
+    font-size: 9.5px;
+  }
+
+  /* REMOVE ROW symbol matches ADD ROW on mobile as well. */
+  .remove-row-button {
+    gap: 5px;
+    padding-left: 5px;
+  }
+
+  .remove-row-button > span {
+    width: 22px;
+    height: 22px;
+    border-radius: 7px;
+    font-size: 14px;
+  }
+
+  /* 5) In compact batch mode, recipient accounts become a true vertical list. */
+  .teller-panel.compact-recipient-mode .compact-date-config {
+    grid-template-columns: 1fr 126px;
+    align-items: end;
+  }
+
+  .teller-panel.compact-recipient-mode .compact-date-copy > small {
+    max-width: 230px;
+  }
+
+  .teller-panel.compact-recipient-mode .batch-grid {
+    gap: 6px;
+  }
+
+  .teller-panel.compact-recipient-mode .batch-row,
+  .teller-panel.compact-recipient-mode .batch-row.transfer,
+  .teller-panel.compact-recipient-mode .batch-row.provider {
+    width: 100%;
+    grid-template-columns: 48px minmax(0,1fr) !important;
+    gap: 8px;
+    padding: 8px;
+    border-radius: 14px;
+    box-shadow: 0 5px 16px rgba(8,19,26,.03);
+  }
+
+  .teller-panel.compact-recipient-mode .batch-row-leading {
+    grid-column: 1;
+    width: 48px;
+    display: grid;
+    justify-items: center;
+    align-self: center;
+    gap: 3px;
+  }
+
+  .teller-panel.compact-recipient-mode .batch-index {
+    grid-column: auto;
+    width: 38px;
+    min-width: 38px;
+    height: 23px;
+    padding: 0;
+    font-size: 6px;
+  }
+
+  .teller-panel.compact-recipient-mode .batch-index::before {
+    content: "";
+  }
+
+  .teller-panel.compact-recipient-mode .row-clear-button {
+    width: 28px;
+    min-width: 28px;
+    min-height: 22px;
+    padding: 0;
+    font-size: 0;
+    border-radius: 8px;
+  }
+
+  .teller-panel.compact-recipient-mode .row-clear-button::before {
+    content: "×";
+    font-size: 12px;
+    line-height: 1;
+  }
+
+  .teller-panel.compact-recipient-mode .recipient-account-field {
+    grid-column: 2;
+    align-self: center;
+    gap: 3px;
+  }
+
+  .teller-panel.compact-recipient-mode .recipient-account-field label {
+    font-size: 5.7px;
+  }
+
+  .teller-panel.compact-recipient-mode .recipient-account-field .batch-input {
+    height: 40px;
+    min-height: 40px;
+    border-radius: 10px;
+    background: #fbfaf7;
+  }
+}
+
+@media (max-width: 430px) {
+  body.home-view-active .welcome-view {
+    padding: 25px 15px 19px;
+  }
+
+  body.home-view-active .welcome-view::before {
+    left: 9px;
+    right: 9px;
+    bottom: 9px;
+    height: 207px;
+    border-radius: 21px;
+  }
+
+  body.home-view-active .hero-search {
+    grid-template-columns: minmax(0,1fr) 108px;
+  }
+
+  .teller-panel .panel-controls .mode-control,
+  .teller-panel .panel-controls .description-mode-control,
+  .teller-panel .panel-controls .amount-mode-control {
+    grid-template-columns: 64px minmax(0,1fr);
+    gap: 6px;
+  }
+
+  .teller-panel .panel-controls .row-count-control {
+    grid-template-columns: 64px 68px;
+    gap: 6px;
+  }
+
+  .teller-panel .panel-controls .row-count-input {
+    width: 68px;
+  }
+
+  .teller-panel.compact-recipient-mode .compact-date-config {
+    grid-template-columns: 1fr 116px;
+  }
+}
+
+/* =========================================================
+   ZAIGEN MOBILE POLISH V5 — REQUESTED UI REFINEMENTS ONLY
+   Mobile-only overrides. Desktop presentation and all JS
+   transaction logic remain unchanged.
+========================================================= */
+@media (max-width: 780px) {
+  /* 1) ACCOUNT HOLDER — cleaner hierarchy and balanced card.
+     Photo + identity sit together; account/X metadata gets a
+     dedicated full-width strip below instead of being squeezed. */
+  .identity-card {
+    grid-template-columns: 92px minmax(0, 1fr);
+    grid-template-areas:
+      "profile-photo profile-kicker"
+      "profile-photo profile-name"
+      "profile-photo profile-kanji"
+      "profile-meta profile-meta";
+    column-gap: 15px;
+    row-gap: 0;
+    align-items: center;
+    padding: 15px;
+    border-radius: 24px;
+    background: linear-gradient(145deg, rgba(255,255,255,.985), rgba(249,247,241,.97));
+    box-shadow: 0 12px 30px rgba(8,19,26,.07);
+  }
+
+  .identity-card .photo-frame {
+    grid-area: profile-photo;
+    width: 92px;
+    height: 116px;
+    align-self: center;
+    justify-self: start;
+    border-radius: 21px;
+    box-shadow: 0 10px 24px rgba(8,19,26,.14);
+  }
+
+  .identity-card .photo-frame::before {
+    border-radius: 18px;
+  }
+
+  .identity-card .photo-frame::after {
+    border-radius: 13px;
+  }
+
+  .identity-card .photo-frame img {
+    object-position: center 26%;
+    border-radius: 15px;
+  }
+
+  .identity-card .status-badge {
+    left: 7px;
+    right: 7px;
+    bottom: 7px;
+    min-height: 21px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 4px 6px;
+    font-size: 5.8px;
+    letter-spacing: .11em;
+  }
+
+  .identity-card .identity-copy {
+    display: contents;
+  }
+
+  .identity-card .identity-copy > .eyebrow {
+    grid-area: profile-kicker;
+    align-self: end;
+    margin: 0 0 4px;
+    font-size: 6.5px;
+    line-height: 1.15;
+    letter-spacing: .16em;
+  }
+
+  .identity-card .identity-copy h2 {
+    grid-area: profile-name;
+    align-self: center;
+    margin: 0;
+    min-width: 0;
+    font-size: clamp(22px, 6vw, 27px);
+    line-height: 1.02;
+    letter-spacing: -.035em;
+  }
+
+  .identity-card .identity-copy h2 .profile-ledger-link {
+    white-space: normal;
+    overflow: visible;
+    text-overflow: clip;
+    line-height: inherit;
+  }
+
+  .identity-card .kanji-name {
+    grid-area: profile-kanji;
+    align-self: start;
+    margin: 4px 0 0;
+    font-size: 13px;
+    line-height: 1.2;
+    letter-spacing: .06em;
+  }
+
+  .identity-card .identity-meta {
+    grid-area: profile-meta;
+    width: 100%;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+    margin-top: 13px;
+    padding: 11px 0 0;
+    border-top: 1px solid rgba(8,19,26,.07);
+  }
+
+  .identity-card .identity-meta div {
+    min-width: 0;
+    min-height: 52px;
+    justify-content: center;
+    gap: 4px;
+    padding: 9px 10px;
+    border: 1px solid rgba(8,19,26,.065);
+    border-radius: 13px;
+    background: rgba(247,245,239,.82);
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.8);
+  }
+
+  .identity-card .identity-meta span {
+    font-size: 5.8px;
+    letter-spacing: .10em;
+  }
+
+  .identity-card .identity-meta strong,
+  .identity-card .identity-meta a {
+    max-width: 100%;
+    font-size: 9.2px;
+    line-height: 1.2;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  /* 2) TRANSACTION INPUTS — dense banking-style transaction cards.
+     The six data points are organized in a compact 2-column rhythm
+     instead of stacked rows that create dead space. */
+  #reportsPanel .report-document {
+    padding: 12px;
+  }
+
+  #reportsPanel .report-table tbody {
+    gap: 8px;
+  }
+
+  #reportsPanel .report-table tr {
+    position: relative;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, .88fr);
+    grid-template-areas:
+      "report-date report-account"
+      "report-name report-amount"
+      "report-description report-staff"
+      "report-actions report-actions";
+    align-items: start;
+    gap: 7px 12px;
+    padding: 11px 12px 10px;
+    border: 1px solid rgba(8,19,26,.075);
+    border-radius: 16px;
+    background: linear-gradient(145deg, #fcfbf8 0%, #f7f5ee 100%);
+    box-shadow: 0 5px 14px rgba(8,19,26,.025);
+  }
+
+  #reportsPanel .report-table tr + tr {
+    margin-top: 0;
+  }
+
+  #reportsPanel .report-table td {
+    min-width: 0;
+    padding: 0;
+    border: 0;
+    font-size: 8.8px;
+    line-height: 1.28;
+    color: var(--navy-deep);
+    overflow-wrap: anywhere;
+  }
+
+  #reportsPanel .report-table td::before {
+    display: block;
+    margin-bottom: 2px;
+    color: rgba(21,40,50,.48);
+    font-size: 5.2px;
+    line-height: 1;
+    font-weight: 800;
+    letter-spacing: .105em;
+    text-transform: uppercase;
+  }
+
+  #reportsPanel .report-table td:nth-child(1) {
+    grid-area: report-date;
+  }
+
+  #reportsPanel .report-table td:nth-child(2) {
+    grid-area: report-account;
+    text-align: right;
+  }
+
+  #reportsPanel .report-table td:nth-child(3) {
+    grid-area: report-name;
+    align-self: center;
+    padding-top: 2px;
+    font-weight: 700;
+  }
+
+  #reportsPanel .report-table td:nth-child(4) {
+    grid-area: report-description;
+    min-height: 42px;
+    padding: 8px 9px;
+    border: 1px solid rgba(8,19,26,.055);
+    border-radius: 11px;
+    background: rgba(255,255,255,.72);
+  }
+
+  #reportsPanel .report-table td:nth-child(5) {
+    grid-area: report-staff;
+    min-height: 42px;
+    padding: 8px 9px;
+    border: 1px solid rgba(8,19,26,.055);
+    border-radius: 11px;
+    background: rgba(255,255,255,.72);
+  }
+
+  #reportsPanel .report-table td:nth-child(6) {
+    grid-area: report-amount;
+    align-self: center;
+    justify-self: stretch;
+    padding-top: 2px;
+    text-align: right;
+    font-size: 10.4px;
+    font-weight: 800;
+  }
+
+  #reportsPanel .report-table td:nth-child(7) {
+    grid-area: report-actions;
+    margin-top: 1px;
+  }
+
+  #reportsPanel .report-table td:nth-child(2)::before,
+  #reportsPanel .report-table td:nth-child(6)::before {
+    text-align: right;
+  }
+
+  #reportsPanel .action-buttons {
+    width: 100%;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 96px));
+    justify-content: start;
+    gap: 7px;
+    margin-top: 1px;
+  }
+
+  #reportsPanel .action-buttons button {
+    min-height: 31px;
+    padding: 6px 10px;
+    border-radius: 10px;
+    border-color: rgba(141,100,30,.18);
+    background: rgba(255,255,255,.94);
+    font-size: 6.2px;
+    letter-spacing: .04em;
+    box-shadow: none;
+  }
+
+  /* 3) HOME HERO — shift the photographic composition further right. */
+  body.home-view-active .welcome-art-frame img,
+  .welcome-art-frame img {
+    object-position: 63% center;
+  }
+}
+
+@media (max-width: 430px) {
+  .identity-card {
+    grid-template-columns: 86px minmax(0, 1fr);
+    column-gap: 12px;
+    padding: 13px;
+  }
+
+  .identity-card .photo-frame {
+    width: 86px;
+    height: 109px;
+  }
+
+  .identity-card .identity-copy h2 {
+    font-size: clamp(21px, 6.2vw, 25px);
+  }
+
+  .identity-card .identity-meta {
+    gap: 7px;
+    margin-top: 11px;
+    padding-top: 10px;
+  }
+
+  .identity-card .identity-meta div {
+    min-height: 49px;
+    padding: 8px 9px;
+  }
+
+  .identity-card .identity-meta strong,
+  .identity-card .identity-meta a {
+    font-size: 8.6px;
+  }
+
+  #reportsPanel .report-table tr {
+    gap: 7px 10px;
+    padding: 10px;
+  }
+
+  #reportsPanel .report-table td:nth-child(4),
+  #reportsPanel .report-table td:nth-child(5) {
+    min-height: 40px;
+    padding: 7px 8px;
+  }
+
+  body.home-view-active .welcome-art-frame img,
+  .welcome-art-frame img {
+    object-position: 65% center;
+  }
+}
+
+/* =========================================================
+   ZAIGEN PREMIUM V6 — TARGETED REVISIONS
+   1) Salary/Royalty desktop control alignment
+   2) Compact mode keeps recipient name visible
+   3) Transaction Inputs shows one logical transaction per pair
+   4) Mobile home artwork is centered again
+========================================================= */
+
+/* ---------- Desktop: Salary/Royalty option matrix ---------- */
+@media (min-width: 781px) {
+  #salaryPanel .panel-description {
+    display: grid;
+    grid-template-columns: minmax(330px, 1fr) auto;
+    align-items: end;
+    gap: 24px;
+  }
+
+  #salaryPanel .panel-description > div:first-child {
+    min-width: 0;
+  }
+
+  #salaryPanel .panel-controls {
+    display: grid;
+    grid-template-columns: 158px 214px 244px 94px;
+    align-items: end;
+    justify-content: end;
+    gap: 10px;
+    flex-wrap: nowrap;
+  }
+
+  #salaryPanel .panel-controls > * {
+    min-width: 0;
+  }
+
+  #salaryPanel .panel-controls .mode-control,
+  #salaryPanel .panel-controls .description-mode-control,
+  #salaryPanel .panel-controls .amount-mode-control {
+    width: 100%;
+  }
+
+  #salaryPanel .panel-controls .mode-switch {
+    width: 100%;
+    display: flex;
+  }
+
+  #salaryPanel .panel-controls .mode-option {
+    min-width: 0;
+    flex: 1 1 0;
+    padding-inline: 7px;
+    white-space: nowrap;
+  }
+
+  #salaryPanel .panel-controls .row-count-control {
+    display: grid;
+    grid-template-columns: 1fr;
+    align-items: end;
+    gap: 7px;
+  }
+
+  #salaryPanel .panel-controls .row-count-input {
+    width: 94px;
+    min-width: 94px;
+  }
+}
+
+/* ---------- Compact bulk: Account + Recipient Name stay together ---------- */
+.teller-panel.compact-recipient-mode .recipient-name-field {
+  display: grid !important;
+}
+
+.teller-panel.compact-recipient-mode .batch-row,
+.teller-panel.compact-recipient-mode .batch-row.transfer,
+.teller-panel.compact-recipient-mode .batch-row.provider {
+  width: min(980px, 100%);
+  grid-template-columns: 58px minmax(250px, 1.08fr) minmax(220px, .92fr);
+}
+
+.teller-panel.compact-recipient-mode .recipient-account-field {
+  grid-column: 2;
+}
+
+.teller-panel.compact-recipient-mode .recipient-name-field {
+  grid-column: 3;
+  min-width: 0;
+  width: 100%;
+}
+
+.teller-panel.compact-recipient-mode .recipient-name-field .batch-input {
+  width: 100%;
+  background: rgba(240,234,223,.82);
+}
+
+/* ---------- Transaction Inputs: one logical transaction per D/C pair ---------- */
+#reportsPanel .report-table {
+  min-width: 1080px;
+}
+
+#reportsPanel .report-transaction-paired {
+  background: rgba(255,255,255,.76);
+}
+
+#reportsPanel .report-transaction-meta {
+  min-width: 150px;
+  display: grid;
+  justify-items: start;
+  gap: 3px;
+}
+
+#reportsPanel .report-transaction-meta strong {
+  max-width: 100%;
+  color: var(--navy-deep);
+  font-size: 10px;
+  line-height: 1.2;
+  font-weight: 800;
+  overflow-wrap: anywhere;
+}
+
+#reportsPanel .report-transaction-meta small {
+  color: var(--muted);
+  font-size: 8px;
+  line-height: 1.25;
+}
+
+#reportsPanel .report-pair-badge {
+  display: inline-flex;
+  align-items: center;
+  min-height: 20px;
+  padding: 4px 7px;
+  border-radius: 999px;
+  background: rgba(46,109,88,.09);
+  color: var(--green);
+  font-size: 7px;
+  line-height: 1;
+  font-weight: 800;
+  letter-spacing: .08em;
+}
+
+#reportsPanel .report-pair-badge.single {
+  background: rgba(141,100,30,.09);
+  color: var(--gold-deep);
+}
+
+#reportsPanel .report-party {
+  min-width: 145px;
+  display: grid;
+  gap: 3px;
+}
+
+#reportsPanel .report-party .ledger-name-link {
+  justify-self: start;
+  max-width: 100%;
+  color: var(--navy-deep);
+  font-size: 11px;
+  line-height: 1.2;
+  font-weight: 800;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+#reportsPanel .report-party .ledger-account-link {
+  justify-self: start;
+  color: var(--muted);
+  font-size: 8px;
+  line-height: 1.2;
+  letter-spacing: .04em;
+}
+
+#reportsPanel .report-party-empty {
+  display: inline-flex;
+  align-items: center;
+  min-height: 30px;
+  color: var(--muted);
+  font-size: 9px;
+  font-style: italic;
+}
+
+/* ---------- Edit modal: paired route context ---------- */
+.edit-transaction-route {
+  margin: 18px 0 2px;
+  padding: 14px;
+  display: grid;
+  grid-template-columns: minmax(0, 1.15fr) minmax(0, .95fr) 24px minmax(0, .95fr);
+  gap: 10px;
+  align-items: center;
+  border: 1px solid rgba(141,100,30,.18);
+  border-radius: 16px;
+  background: linear-gradient(145deg, rgba(255,255,255,.78), rgba(245,239,212,.54));
+}
+
+.edit-route-id,
+.edit-route-party {
+  min-width: 0;
+  display: grid;
+  gap: 3px;
+}
+
+.edit-route-id > span,
+.edit-route-party > span {
+  color: var(--gold-deep);
+  font-size: 7px;
+  line-height: 1;
+  font-weight: 800;
+  letter-spacing: .12em;
+}
+
+.edit-route-id > strong,
+.edit-route-party > strong {
+  min-width: 0;
+  color: var(--navy-deep);
+  font-size: 10px;
+  line-height: 1.2;
+  font-weight: 800;
+  overflow-wrap: anywhere;
+}
+
+.edit-route-id > small,
+.edit-route-party strong small {
+  display: block;
+  margin-top: 2px;
+  color: var(--muted);
+  font-size: 7.5px;
+  line-height: 1.25;
+  font-weight: 500;
+}
+
+.edit-route-arrow {
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: var(--navy-deep);
+  color: var(--gold-bright);
+  font-size: 13px;
+}
+
+/* ---------- Mobile-specific adjustments ---------- */
+@media (max-width: 780px) {
+  /* Home artwork: restore a true centered crop. */
+  body.home-view-active .welcome-art-frame img,
+  .welcome-art-frame img {
+    object-position: 50% center !important;
+  }
+
+  /* Compact recipient mode: number | account | auto-filled name. */
+  .teller-panel.compact-recipient-mode .batch-row,
+  .teller-panel.compact-recipient-mode .batch-row.transfer,
+  .teller-panel.compact-recipient-mode .batch-row.provider {
+    width: 100%;
+    min-width: 0;
+    grid-template-columns: 48px minmax(0, 1.05fr) minmax(0, .95fr);
+    gap: 7px;
+  }
+
+  .teller-panel.compact-recipient-mode .recipient-account-field {
+    grid-column: 2;
+  }
+
+  .teller-panel.compact-recipient-mode .recipient-name-field {
+    grid-column: 3;
+    align-self: center;
+    gap: 3px;
+  }
+
+  .teller-panel.compact-recipient-mode .recipient-name-field label {
+    font-size: 5.7px;
+  }
+
+  .teller-panel.compact-recipient-mode .recipient-name-field .batch-input {
+    height: 40px;
+    min-height: 40px;
+    padding-inline: 8px;
+    border-radius: 10px;
+    font-size: 8.4px;
+  }
+
+  /* Grouped Transaction Inputs card. Earlier nth-child layouts are reset here. */
+  #reportsPanel .report-table {
+    min-width: 0;
+  }
+
+  #reportsPanel .report-table tr {
+    display: grid;
+    grid-template-columns: minmax(0,1fr) minmax(0,1fr);
+    grid-template-areas:
+      "report-transaction report-transaction"
+      "report-source report-recipient"
+      "report-description report-amount"
+      "report-date report-actions";
+    gap: 8px 10px;
+    padding: 11px;
+    border-radius: 16px;
+  }
+
+  #reportsPanel .report-table td {
+    min-width: 0;
+    padding: 0;
+    border: 0;
+    text-align: left;
+  }
+
+  #reportsPanel .report-table td:nth-child(1) {
+    grid-area: report-date;
+    align-self: end;
+    padding: 0;
+    text-align: left;
+    color: var(--muted);
+    font-size: 7.5px;
+  }
+
+  #reportsPanel .report-table td:nth-child(2) {
+    grid-area: report-transaction;
+    padding: 0 0 7px;
+    border-bottom: 1px solid rgba(8,19,26,.065);
+    text-align: left;
+  }
+
+  #reportsPanel .report-table td:nth-child(3) {
+    grid-area: report-source;
+    align-self: stretch;
+    padding: 8px;
+    border: 1px solid rgba(8,19,26,.055);
+    border-radius: 11px;
+    background: rgba(255,255,255,.70);
+  }
+
+  #reportsPanel .report-table td:nth-child(4) {
+    grid-area: report-recipient;
+    min-height: 0;
+    padding: 8px;
+    border: 1px solid rgba(8,19,26,.055);
+    border-radius: 11px;
+    background: rgba(255,255,255,.70);
+  }
+
+  #reportsPanel .report-table td:nth-child(5) {
+    grid-area: report-description;
+    min-height: 40px;
+    padding: 8px;
+    border: 1px solid rgba(8,19,26,.055);
+    border-radius: 11px;
+    background: rgba(255,255,255,.70);
+  }
+
+  #reportsPanel .report-table td:nth-child(6) {
+    grid-area: report-amount;
+    align-self: center;
+    justify-self: stretch;
+    min-height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    padding: 8px;
+    border: 1px solid rgba(46,109,88,.10);
+    border-radius: 11px;
+    background: rgba(46,109,88,.045);
+    text-align: right;
+    font-size: 10px;
+  }
+
+  #reportsPanel .report-table td:nth-child(7) {
+    grid-area: report-actions;
+    align-self: end;
+    margin: 0;
+  }
+
+  #reportsPanel .report-table td::before {
+    display: block;
+    margin-bottom: 3px;
+    color: rgba(21,40,50,.45);
+    font-size: 5.2px;
+    line-height: 1;
+    font-weight: 800;
+    letter-spacing: .10em;
+    text-transform: uppercase;
+    text-align: left;
+  }
+
+  #reportsPanel .report-table td:nth-child(1)::before { content: "Date"; }
+  #reportsPanel .report-table td:nth-child(2)::before { content: "Transaction"; }
+  #reportsPanel .report-table td:nth-child(3)::before { content: "Sender / Source"; }
+  #reportsPanel .report-table td:nth-child(4)::before { content: "Recipient"; }
+  #reportsPanel .report-table td:nth-child(5)::before { content: "Description"; }
+  #reportsPanel .report-table td:nth-child(6)::before { content: "Amount"; text-align: right; }
+  #reportsPanel .report-table td:nth-child(7)::before { display: none; content: ""; }
+
+  #reportsPanel .report-transaction-meta {
+    min-width: 0;
+    display: grid;
+    grid-template-columns: minmax(0,1fr) auto;
+    grid-template-areas:
+      "tx-id tx-badge"
+      "tx-staff tx-badge";
+    gap: 2px 7px;
+    align-items: center;
+  }
+
+  #reportsPanel .report-transaction-meta strong {
+    grid-area: tx-id;
+    font-size: 9px;
+  }
+
+  #reportsPanel .report-transaction-meta small {
+    grid-area: tx-staff;
+    font-size: 6.8px;
+  }
+
+  #reportsPanel .report-pair-badge {
+    grid-area: tx-badge;
+    min-height: 19px;
+    padding: 4px 6px;
+    font-size: 5.7px;
+  }
+
+  #reportsPanel .report-party {
+    min-width: 0;
+    gap: 2px;
+  }
+
+  #reportsPanel .report-party .ledger-name-link {
+    font-size: 8.6px;
+  }
+
+  #reportsPanel .report-party .ledger-account-link {
+    font-size: 6.7px;
+  }
+
+  #reportsPanel .report-party-empty {
+    min-height: 23px;
+    font-size: 7.3px;
+  }
+
+  #reportsPanel .action-buttons {
+    width: 100%;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 72px));
+    justify-content: end;
+    gap: 6px;
+    margin: 0;
+  }
+
+  #reportsPanel .action-buttons button {
+    min-height: 29px;
+    padding: 5px 7px;
+    border-radius: 9px;
+    font-size: 5.8px;
+  }
+
+  .edit-transaction-route {
+    margin-top: 14px;
+    padding: 11px;
+    grid-template-columns: 1fr 22px 1fr;
+    grid-template-areas:
+      "route-id route-id route-id"
+      "route-from route-arrow route-to";
+    gap: 9px;
+    border-radius: 14px;
+  }
+
+  .edit-route-id { grid-area: route-id; padding-bottom: 8px; border-bottom: 1px solid rgba(8,19,26,.06); }
+  .edit-route-party:nth-of-type(2) { grid-area: route-from; }
+  .edit-route-arrow { grid-area: route-arrow; width: 22px; height: 22px; font-size: 11px; }
+  .edit-route-party:last-child { grid-area: route-to; }
+}
+
+@media (max-width: 430px) {
+  body.home-view-active .welcome-art-frame img,
+  .welcome-art-frame img {
+    object-position: 50% center !important;
+  }
+
+  .teller-panel.compact-recipient-mode .batch-row,
+  .teller-panel.compact-recipient-mode .batch-row.transfer,
+  .teller-panel.compact-recipient-mode .batch-row.provider {
+    grid-template-columns: 42px minmax(0,1fr) minmax(0,.9fr);
+    gap: 6px;
+  }
+
+  .teller-panel.compact-recipient-mode .recipient-account-field .batch-input,
+  .teller-panel.compact-recipient-mode .recipient-name-field .batch-input {
+    padding-inline: 7px;
+    font-size: 8px;
+  }
+}
+
+/* =========================================================
+   ZAIGEN PREMIUM V7 — TARGETED DESKTOP CONSISTENCY
+   Requested refinements only:
+   1) Consistent teller option matrix across every input panel
+   2) Full-width aligned shared fields in compact batch mode
+   3) Full-width recipient rows; no stair-step composition
+   Internal provider/source class names remain unchanged so
+   existing transaction logic is not disturbed.
+========================================================= */
+
+@media (min-width: 781px) {
+  /* ---------- One option system for every teller input panel ---------- */
+  #lastBalancePanel .panel-description,
+  #transferPanel .panel-description,
+  #salaryPanel .panel-description,
+  #rewardPanel .panel-description {
+    display: grid;
+    grid-template-columns: minmax(320px, 1fr) auto;
+    align-items: end;
+    gap: 28px;
+  }
+
+  #lastBalancePanel .panel-description > div:first-child,
+  #transferPanel .panel-description > div:first-child,
+  #salaryPanel .panel-description > div:first-child,
+  #rewardPanel .panel-description > div:first-child {
+    min-width: 0;
+  }
+
+  #lastBalancePanel .panel-controls,
+  #transferPanel .panel-controls,
+  #salaryPanel .panel-controls,
+  #rewardPanel .panel-controls {
+    display: grid;
+    align-items: end;
+    justify-content: end;
+    gap: 10px;
+    flex-wrap: nowrap;
+    width: auto;
+    padding: 0;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
+  }
+
+  #transferPanel .panel-controls,
+  #salaryPanel .panel-controls,
+  #rewardPanel .panel-controls {
+    grid-template-columns: 158px 214px 244px 94px;
+  }
+
+  #lastBalancePanel .panel-controls {
+    grid-template-columns: 214px 244px 94px;
+  }
+
+  #lastBalancePanel .panel-controls > *,
+  #transferPanel .panel-controls > *,
+  #salaryPanel .panel-controls > *,
+  #rewardPanel .panel-controls > * {
+    min-width: 0;
+    width: 100%;
+  }
+
+  #lastBalancePanel .panel-controls .mode-control,
+  #lastBalancePanel .panel-controls .description-mode-control,
+  #lastBalancePanel .panel-controls .amount-mode-control,
+  #transferPanel .panel-controls .mode-control,
+  #transferPanel .panel-controls .description-mode-control,
+  #transferPanel .panel-controls .amount-mode-control,
+  #salaryPanel .panel-controls .mode-control,
+  #salaryPanel .panel-controls .description-mode-control,
+  #salaryPanel .panel-controls .amount-mode-control,
+  #rewardPanel .panel-controls .mode-control,
+  #rewardPanel .panel-controls .description-mode-control,
+  #rewardPanel .panel-controls .amount-mode-control {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 7px;
+  }
+
+  #lastBalancePanel .panel-controls .mode-switch,
+  #transferPanel .panel-controls .mode-switch,
+  #salaryPanel .panel-controls .mode-switch,
+  #rewardPanel .panel-controls .mode-switch {
+    width: 100%;
+    min-width: 0;
+    display: flex;
+  }
+
+  #lastBalancePanel .panel-controls .mode-option,
+  #transferPanel .panel-controls .mode-option,
+  #salaryPanel .panel-controls .mode-option,
+  #rewardPanel .panel-controls .mode-option {
+    min-width: 0;
+    flex: 1 1 0;
+    padding-inline: 7px;
+    white-space: nowrap;
+  }
+
+  #lastBalancePanel .panel-controls .row-count-control,
+  #transferPanel .panel-controls .row-count-control,
+  #salaryPanel .panel-controls .row-count-control,
+  #rewardPanel .panel-controls .row-count-control {
+    display: grid;
+    grid-template-columns: 1fr;
+    align-items: end;
+    justify-content: stretch;
+    gap: 7px;
+    min-height: 0;
+    padding: 0;
+  }
+
+  #lastBalancePanel .panel-controls .row-count-input,
+  #transferPanel .panel-controls .row-count-input,
+  #salaryPanel .panel-controls .row-count-input,
+  #rewardPanel .panel-controls .row-count-input {
+    width: 94px;
+    min-width: 94px;
+    justify-self: stretch;
+  }
+
+  /* ---------- Shared controls use one straight, full-width grid ---------- */
+  .teller-panel .single-desc-config,
+  .teller-panel .single-amount-config,
+  .teller-panel .compact-date-config {
+    width: 100%;
+    max-width: none;
+    margin: 0 0 12px;
+    padding: 15px 20px;
+    display: grid;
+    grid-template-columns: minmax(260px, 360px) minmax(0, 1fr);
+    align-items: center;
+    gap: 24px;
+    border-radius: 17px;
+  }
+
+  .teller-panel .single-desc-copy,
+  .teller-panel .single-amount-copy,
+  .teller-panel .compact-date-copy {
+    min-width: 0;
+  }
+
+  .teller-panel .single-desc-field,
+  .teller-panel .single-amount-field,
+  .teller-panel .compact-date-field {
+    width: 100%;
+    min-width: 0;
+    justify-self: stretch;
+  }
+
+  .teller-panel .single-desc-field .batch-input,
+  .teller-panel .single-amount-input-wrap,
+  .teller-panel .compact-date-field .batch-input {
+    width: 100%;
+    min-width: 0;
+  }
+
+  /* ---------- Compact batch list: full width, equal columns, no staircase ---------- */
+  .teller-panel.compact-recipient-mode .batch-grid {
+    width: 100%;
+    gap: 9px;
+  }
+
+  .teller-panel.compact-recipient-mode .batch-row,
+  .teller-panel.compact-recipient-mode .batch-row.transfer,
+  .teller-panel.compact-recipient-mode .batch-row.provider {
+    width: 100%;
+    max-width: none;
+    min-width: 0;
+    grid-template-columns: 64px minmax(0, 1fr) minmax(0, 1fr);
+    gap: 12px;
+    padding: 11px 14px;
+    overflow: visible;
+    border-radius: 16px;
+  }
+
+  .teller-panel.compact-recipient-mode .batch-row-leading {
+    grid-column: 1;
+    width: 100%;
+    justify-self: stretch;
+    align-self: center;
+  }
+
+  .teller-panel.compact-recipient-mode .recipient-account-field {
+    grid-column: 2;
+    width: 100%;
+    min-width: 0;
+  }
+
+  .teller-panel.compact-recipient-mode .recipient-name-field {
+    grid-column: 3;
+    width: 100%;
+    min-width: 0;
+    display: grid !important;
+  }
+
+  .teller-panel.compact-recipient-mode .recipient-account-field .batch-input,
+  .teller-panel.compact-recipient-mode .recipient-name-field .batch-input {
+    width: 100%;
+    min-width: 0;
+  }
+}
+
+/* Mid-size desktop/tablet landscape: keep the same control order, simply
+   move the matrix under the feature description instead of allowing wraps. */
+@media (min-width: 781px) and (max-width: 1240px) {
+  #lastBalancePanel .panel-description,
+  #transferPanel .panel-description,
+  #salaryPanel .panel-description,
+  #rewardPanel .panel-description {
+    grid-template-columns: 1fr;
+    align-items: stretch;
+    gap: 18px;
+  }
+
+  #lastBalancePanel .panel-controls,
+  #transferPanel .panel-controls,
+  #salaryPanel .panel-controls,
+  #rewardPanel .panel-controls {
+    justify-self: stretch;
+    width: 100%;
+  }
+
+  #transferPanel .panel-controls,
+  #salaryPanel .panel-controls,
+  #rewardPanel .panel-controls {
+    grid-template-columns: minmax(120px, .8fr) minmax(170px, 1.05fr) minmax(190px, 1.2fr) 94px;
+  }
+
+  #lastBalancePanel .panel-controls {
+    grid-template-columns: minmax(170px, 1fr) minmax(190px, 1.15fr) 94px;
+  }
+}
