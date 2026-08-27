@@ -7389,3 +7389,178 @@ body.home-view-active .teller-entry {
     font-size: 8.7px;
   }
 }
+
+/* =========================================================
+   ZAIGEN V14 — MOBILE CROSS-BROWSER LAYOUT HARDENING
+   Requested 2026-08-27.
+   - Mobile entry sizing only.
+   - Prevents browser/device text inflation and intrinsic form-control overflow.
+   - Keeps the authored ZAIGEN light/original color scheme.
+   - Desktop layout and transaction logic are untouched.
+========================================================= */
+
+/* Ask the browser to render the authored palette and native controls in light
+   mode even when the operating system/browser itself is using a dark theme. */
+:root {
+  color-scheme: light;
+  color-scheme: only light;
+}
+
+html,
+body {
+  color-scheme: light;
+}
+
+/* Mobile transaction-entry controls must obey the card/grid width rather than
+   each browser's intrinsic minimum width for date/select/input controls. */
+@media (max-width: 780px) {
+  html,
+  body {
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
+  }
+
+  /* Keep the existing two-column design deterministic across Safari/iOS,
+     Chrome/Android, Samsung Internet, Firefox and mobile WebViews. */
+  #lastBalancePanel:not(.compact-recipient-mode) .batch-row,
+  #transferPanel:not(.compact-recipient-mode) .batch-row,
+  #salaryPanel:not(.compact-recipient-mode) .batch-row,
+  #rewardPanel:not(.compact-recipient-mode) .batch-row,
+  #lastBalancePanel:not(.compact-recipient-mode) .batch-row.last-saldo,
+  #transferPanel:not(.compact-recipient-mode) .batch-row.transfer,
+  #salaryPanel:not(.compact-recipient-mode) .batch-row.provider,
+  #rewardPanel:not(.compact-recipient-mode) .batch-row.provider {
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: 100% !important;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) !important;
+    grid-auto-columns: minmax(0, 1fr);
+  }
+
+  /* Compact BULK + SINGLE DESC + SINGLE AMOUNT remains the same visual
+     design, but receives the same strict two-column sizing guarantee. */
+  #transferPanel.compact-recipient-mode .batch-row,
+  #salaryPanel.compact-recipient-mode .batch-row,
+  #rewardPanel.compact-recipient-mode .batch-row,
+  #transferPanel.compact-recipient-mode .batch-row.transfer,
+  #salaryPanel.compact-recipient-mode .batch-row.provider,
+  #rewardPanel.compact-recipient-mode .batch-row.provider {
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: 100% !important;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) !important;
+    grid-auto-columns: minmax(0, 1fr);
+  }
+
+  /* Remove inherited tablet/desktop minimum widths from every mobile entry
+     cell. This is what prevents DATE from becoming wider than AMOUNT. */
+  .teller-panel .batch-row > .batch-field,
+  .teller-panel .batch-field,
+  .teller-panel .date-field,
+  .teller-panel .amount-field,
+  .teller-panel .recipient-account-field,
+  .teller-panel .recipient-name-field,
+  .teller-panel .bulk-source-field {
+    min-width: 0 !important;
+    max-width: 100% !important;
+    width: 100% !important;
+    inline-size: 100%;
+    max-inline-size: 100%;
+  }
+
+  /* Normalize all entry controls so native browser sizing cannot expand a
+     control outside its grid track. Existing colors/heights/radii remain. */
+  .teller-panel .batch-input,
+  .teller-panel .batch-select,
+  .teller-panel .currency-input,
+  .teller-panel .row-count-input,
+  .teller-panel .single-amount-input-wrap,
+  .teller-panel .single-desc-field .batch-input,
+  .teller-panel .compact-date-field .batch-input,
+  .teller-panel .bulk-config .batch-input,
+  .teller-panel .bulk-config .batch-select {
+    box-sizing: border-box !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: 100% !important;
+    inline-size: 100% !important;
+    min-inline-size: 0 !important;
+    max-inline-size: 100% !important;
+    font-family: "Inter", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    font-style: normal;
+    font-synthesis: none;
+    line-height: 1.2;
+  }
+
+  .teller-panel .currency-input {
+    grid-template-columns: auto minmax(0, 1fr);
+    overflow: hidden;
+  }
+
+  .teller-panel .currency-input > input,
+  .teller-panel .currency-input input {
+    box-sizing: border-box !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: 100% !important;
+    inline-size: 100% !important;
+    min-inline-size: 0 !important;
+    max-inline-size: 100% !important;
+    font-family: inherit;
+    font-size: inherit;
+    line-height: inherit;
+  }
+
+  /* iOS/WebKit gives type=date its own intrinsic width. Constrain its logical
+     width and normalize its internal value box while preserving the native
+     date picker itself. */
+  .teller-panel input[type="date"],
+  .teller-panel .js-date,
+  .teller-panel .js-compact-shared-date {
+    display: block;
+    box-sizing: border-box !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: 100% !important;
+    inline-size: 100% !important;
+    min-inline-size: 0 !important;
+    max-inline-size: 100% !important;
+    overflow: hidden;
+    font-family: "Inter", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    font-variant-numeric: tabular-nums;
+    text-align: left;
+  }
+
+  .teller-panel input[type="date"]::-webkit-date-and-time-value {
+    min-width: 0;
+    width: 100%;
+    margin: 0;
+    text-align: left;
+  }
+
+  .teller-panel input[type="date"]::-webkit-datetime-edit {
+    min-width: 0;
+    padding: 0;
+  }
+
+  .teller-panel input[type="date"]::-webkit-calendar-picker-indicator {
+    flex: 0 0 auto;
+    margin: 0;
+  }
+
+  /* Selects can also carry intrinsic widths from long option labels. */
+  .teller-panel select,
+  .teller-panel .batch-select {
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+  }
+
+  /* Numeric/date presentation remains stable across platform font engines. */
+  .teller-panel .js-amount,
+  .teller-panel .row-count-input,
+  .teller-panel input[type="date"] {
+    font-variant-numeric: tabular-nums;
+  }
+}
+
