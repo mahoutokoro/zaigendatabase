@@ -7564,3 +7564,177 @@ body {
   }
 }
 
+/* =========================================================
+   ZAIGEN V15 — MOBILE TELLER HEADER LOGO + FOOTER
+   Mobile Teller only. Desktop layout and transaction logic
+   remain untouched.
+========================================================= */
+
+/* The extra Teller-header emblem does not exist visually on desktop. */
+.mobile-workspace-header-logo {
+  display: none;
+}
+
+@media (max-width: 780px) {
+  /* Logo sits neatly to the left of BOTH existing header lines. */
+  body.teller-workspace-open .workspace-header > div {
+    min-width: 0;
+    display: grid;
+    grid-template-columns: 36px minmax(0, 1fr);
+    grid-template-rows: auto auto;
+    column-gap: 10px;
+    row-gap: 2px;
+    align-items: center;
+  }
+
+  body.teller-workspace-open .mobile-workspace-header-logo {
+    grid-column: 1;
+    grid-row: 1 / 3;
+    display: block;
+    width: 34px;
+    height: 34px;
+    max-width: 34px;
+    max-height: 34px;
+    object-fit: contain;
+    align-self: center;
+    justify-self: start;
+    filter: drop-shadow(0 5px 10px rgba(8,19,26,.10));
+  }
+
+  body.teller-workspace-open .workspace-header .eyebrow {
+    grid-column: 2;
+    grid-row: 1;
+    min-width: 0;
+    margin: 0;
+    align-self: end;
+  }
+
+  body.teller-workspace-open .mobile-workspace-title {
+    grid-column: 2;
+    grid-row: 2;
+    min-width: 0;
+    margin: 0;
+    align-self: start;
+  }
+
+  /* The Teller workspace already contains this footer in the original HTML.
+     It was hidden on mobile; now it is restored as a compact premium footer. */
+  body.teller-workspace-open .workspace-credit {
+    position: relative;
+    z-index: 84;
+    flex: 0 0 auto;
+    width: 100%;
+    min-height: 36px;
+    display: flex !important;
+    align-items: center;
+    justify-content: center;
+    padding: 9px 12px calc(9px + env(safe-area-inset-bottom, 0px));
+    border-top: 1px solid rgba(8,19,26,.07);
+    background: rgba(250,249,245,.98);
+    box-shadow: 0 -5px 16px rgba(8,19,26,.035);
+    backdrop-filter: blur(18px);
+  }
+
+  body.teller-workspace-open .workspace-credit strong {
+    padding: 0;
+    color: var(--navy);
+    font-size: 6.5px;
+    line-height: 1;
+    font-weight: 800;
+    letter-spacing: .17em;
+    text-align: center;
+  }
+}
+
+@media (max-width: 430px) {
+  body.teller-workspace-open .workspace-header > div {
+    grid-template-columns: 33px minmax(0, 1fr);
+    column-gap: 9px;
+  }
+
+  body.teller-workspace-open .mobile-workspace-header-logo {
+    width: 31px;
+    height: 31px;
+    max-width: 31px;
+    max-height: 31px;
+  }
+}
+
+/* =========================================================
+   ZAIGEN V16 — MOBILE TELLER HEADER + NATURAL FOOTER
+   Requested revision:
+   1) Teller header logo matches the 42px mobile Home logo.
+   2) Teller footer is a normal in-page footer, not frozen.
+   Desktop UI and all transaction logic remain untouched.
+========================================================= */
+
+.mobile-workspace-credit {
+  display: none;
+}
+
+@media (max-width: 780px) {
+  /* Match the mobile Home header logo exactly: 42 × 42 px. */
+  body.teller-workspace-open .workspace-header > div {
+    grid-template-columns: 44px minmax(0, 1fr);
+    column-gap: 10px;
+  }
+
+  body.teller-workspace-open .mobile-workspace-header-logo {
+    width: 42px;
+    height: 42px;
+    max-width: 42px;
+    max-height: 42px;
+  }
+
+  /* The old workspace footer remains available for desktop only.
+     On mobile it is hidden so it cannot behave like a frozen footer. */
+  body.teller-workspace-open .workspace-credit {
+    display: none !important;
+  }
+
+  /* Mobile Teller footer lives inside .workspace-content, therefore it
+     naturally appears only after the page content and scrolls away normally. */
+  body.teller-workspace-open .mobile-workspace-credit {
+    position: static;
+    inset: auto;
+    z-index: auto;
+    width: 100%;
+    min-height: 42px;
+    margin: 26px 0 2px;
+    padding: 15px 12px 13px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-top: 1px solid rgba(8,19,26,.08);
+    background: transparent;
+    box-shadow: none;
+    backdrop-filter: none;
+  }
+
+  body.teller-workspace-open .mobile-workspace-credit strong {
+    padding: 0;
+    color: var(--navy);
+    font-size: 7px;
+    line-height: 1.2;
+    font-weight: 800;
+    letter-spacing: .17em;
+    text-align: center;
+  }
+}
+
+/* Do NOT shrink the Teller logo on narrower phones.
+   Keeping 42px makes it identical to the Home header logo. */
+@media (max-width: 430px) {
+  body.teller-workspace-open .workspace-header > div {
+    grid-template-columns: 44px minmax(0, 1fr);
+    column-gap: 9px;
+  }
+
+  body.teller-workspace-open .mobile-workspace-header-logo {
+    width: 42px;
+    height: 42px;
+    max-width: 42px;
+    max-height: 42px;
+  }
+}
+
