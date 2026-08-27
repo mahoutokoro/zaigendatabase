@@ -19,7 +19,11 @@
   --radius: 24px;
 }
 * { box-sizing: border-box; }
-html { scroll-behavior: smooth; }
+html {
+  scroll-behavior: smooth;
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
 body {
   margin: 0;
   min-height: 100vh;
@@ -7251,5 +7255,137 @@ body.home-view-active .teller-entry {
   #rewardPanel:not(.compact-recipient-mode) .batch-row .currency-input {
     width: 100%;
     min-width: 0;
+  }
+}
+
+
+/* =========================================================
+   ZAIGEN PREMIUM V12 — MOBILE COMPACT RECIPIENT PAIR
+   Requested 2026-08-27.
+   MOBILE TELLER ONLY.
+
+   In BULK + SINGLE DESC + SINGLE AMOUNT, the only per-entry controls are
+   Recipient Account and Recipient Name. Older ID-based mobile placement rules
+   could push these onto separate rows. Keep the pair genuinely side-by-side
+   for Personal Transfer, Salary/Royalty, and Rewards.
+========================================================= */
+@media (max-width: 780px) {
+  #transferPanel.compact-recipient-mode .batch-row,
+  #salaryPanel.compact-recipient-mode .batch-row,
+  #rewardPanel.compact-recipient-mode .batch-row,
+  #transferPanel.compact-recipient-mode .batch-row.transfer,
+  #salaryPanel.compact-recipient-mode .batch-row.provider,
+  #rewardPanel.compact-recipient-mode .batch-row.provider {
+    width: 100%;
+    max-width: none;
+    min-width: 0;
+    min-height: 0;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) !important;
+    grid-template-rows: auto auto !important;
+    column-gap: 8px;
+    row-gap: 8px;
+    align-items: start;
+    padding: 10px;
+  }
+
+  #transferPanel.compact-recipient-mode .batch-row-leading,
+  #salaryPanel.compact-recipient-mode .batch-row-leading,
+  #rewardPanel.compact-recipient-mode .batch-row-leading {
+    grid-column: 1 / -1 !important;
+    grid-row: 1 !important;
+    width: 100%;
+    min-width: 0;
+    margin: 0;
+  }
+
+  #transferPanel.compact-recipient-mode .batch-row .recipient-account-field,
+  #salaryPanel.compact-recipient-mode .batch-row .recipient-account-field,
+  #rewardPanel.compact-recipient-mode .batch-row .recipient-account-field {
+    grid-column: 1 !important;
+    grid-row: 2 !important;
+  }
+
+  #transferPanel.compact-recipient-mode .batch-row .recipient-name-field,
+  #salaryPanel.compact-recipient-mode .batch-row .recipient-name-field,
+  #rewardPanel.compact-recipient-mode .batch-row .recipient-name-field {
+    grid-column: 2 !important;
+    grid-row: 2 !important;
+  }
+
+  #transferPanel.compact-recipient-mode .batch-row .recipient-account-field,
+  #transferPanel.compact-recipient-mode .batch-row .recipient-name-field,
+  #salaryPanel.compact-recipient-mode .batch-row .recipient-account-field,
+  #salaryPanel.compact-recipient-mode .batch-row .recipient-name-field,
+  #rewardPanel.compact-recipient-mode .batch-row .recipient-account-field,
+  #rewardPanel.compact-recipient-mode .batch-row .recipient-name-field {
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: none !important;
+    display: grid !important;
+    align-self: stretch;
+    gap: 4px;
+  }
+
+  #transferPanel.compact-recipient-mode .batch-row .recipient-account-field label,
+  #transferPanel.compact-recipient-mode .batch-row .recipient-name-field label,
+  #salaryPanel.compact-recipient-mode .batch-row .recipient-account-field label,
+  #salaryPanel.compact-recipient-mode .batch-row .recipient-name-field label,
+  #rewardPanel.compact-recipient-mode .batch-row .recipient-account-field label,
+  #rewardPanel.compact-recipient-mode .batch-row .recipient-name-field label {
+    min-height: 8px;
+    margin: 0;
+    white-space: normal;
+  }
+
+  #transferPanel.compact-recipient-mode .batch-row .recipient-account-field .batch-input,
+  #transferPanel.compact-recipient-mode .batch-row .recipient-name-field .batch-input,
+  #salaryPanel.compact-recipient-mode .batch-row .recipient-account-field .batch-input,
+  #salaryPanel.compact-recipient-mode .batch-row .recipient-name-field .batch-input,
+  #rewardPanel.compact-recipient-mode .batch-row .recipient-account-field .batch-input,
+  #rewardPanel.compact-recipient-mode .batch-row .recipient-name-field .batch-input {
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: none !important;
+    height: 43px;
+    min-height: 43px;
+    padding: 8px 9px;
+  }
+
+  #transferPanel.compact-recipient-mode .batch-row .recipient-account-field .account-warning,
+  #transferPanel.compact-recipient-mode .batch-row .recipient-name-field .account-warning,
+  #salaryPanel.compact-recipient-mode .batch-row .recipient-account-field .account-warning,
+  #salaryPanel.compact-recipient-mode .batch-row .recipient-name-field .account-warning,
+  #rewardPanel.compact-recipient-mode .batch-row .recipient-account-field .account-warning,
+  #rewardPanel.compact-recipient-mode .batch-row .recipient-name-field .account-warning {
+    min-height: 0;
+  }
+
+  #transferPanel.compact-recipient-mode .batch-row .recipient-account-field .account-warning:empty,
+  #transferPanel.compact-recipient-mode .batch-row .recipient-name-field .account-warning:empty,
+  #salaryPanel.compact-recipient-mode .batch-row .recipient-account-field .account-warning:empty,
+  #salaryPanel.compact-recipient-mode .batch-row .recipient-name-field .account-warning:empty,
+  #rewardPanel.compact-recipient-mode .batch-row .recipient-account-field .account-warning:empty,
+  #rewardPanel.compact-recipient-mode .batch-row .recipient-name-field .account-warning:empty {
+    display: none;
+  }
+}
+
+@media (max-width: 380px) {
+  #transferPanel.compact-recipient-mode .batch-row,
+  #salaryPanel.compact-recipient-mode .batch-row,
+  #rewardPanel.compact-recipient-mode .batch-row {
+    column-gap: 6px;
+    padding: 9px;
+  }
+
+  #transferPanel.compact-recipient-mode .batch-row .recipient-account-field .batch-input,
+  #transferPanel.compact-recipient-mode .batch-row .recipient-name-field .batch-input,
+  #salaryPanel.compact-recipient-mode .batch-row .recipient-account-field .batch-input,
+  #salaryPanel.compact-recipient-mode .batch-row .recipient-name-field .batch-input,
+  #rewardPanel.compact-recipient-mode .batch-row .recipient-account-field .batch-input,
+  #rewardPanel.compact-recipient-mode .batch-row .recipient-name-field .batch-input {
+    padding-inline: 7px;
+    font-size: 8.7px;
   }
 }

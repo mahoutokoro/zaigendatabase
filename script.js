@@ -9,7 +9,7 @@ const CONFIG = {
   STAFF_SPREADSHEET_ID: '1B-4musvQU1r--MpBk0O5wGpB9gGsAtogdTrV3Zb0ENw',
   STAFF_SHEET: 'LOGIN PASS',
   LOGO_FILE_ID: '155EMzz-V3xXlB73YO12TP7hPXA1i1jVN',
-  DEFAULT_ROWS: 5,
+  DEFAULT_ROWS: 1,
   MAX_ROWS: 100,
   ROW_STEP: 5,
   CURRENCY: '両',
@@ -2059,18 +2059,15 @@ function removeLastBatchRow(type) {
   }
 
   const lastRow = rows[rows.length - 1];
-  if (!isBatchRowPristine(type, lastRow)) {
-    const ok = window.confirm('The last row contains data. Remove this row anyway?');
-    if (!ok) return;
-  }
 
+  // REMOVE ROW is intentionally immediate, matching ADD ROW behavior.
+  // The teller explicitly requested no confirmation dialog here.
   lastRow.remove();
   renumberBatchRows(type);
   const count = $$('.batch-row', container).length;
   const input = document.getElementById(rowInputIdForType(type));
   if (input) input.value = String(count);
   clearPendingBatchRequest(type);
-  toast('Last row removed.');
 }
 
 /**
