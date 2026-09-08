@@ -7738,3 +7738,156 @@ body {
   }
 }
 
+
+/* =========================================================
+   ZAIGEN REVISION — HISTORY SCOPE CONTROLS
+   Default views show the complete history; month filters are
+   optional and intentionally do not change transaction logic.
+========================================================= */
+
+.ledger-scope-control,
+.report-scope-control {
+  display: grid;
+  gap: 4px;
+  min-width: 170px;
+}
+
+.ledger-scope-control > span,
+.report-scope-control > span {
+  font-size: 8px;
+  line-height: 1;
+  text-transform: uppercase;
+  letter-spacing: .12em;
+  color: var(--muted);
+  font-weight: 800;
+}
+
+.ledger-scope-select,
+#reportScope {
+  width: 100%;
+  min-height: 38px;
+  padding: 7px 34px 7px 10px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  outline: 0;
+  background: rgba(255,255,255,.82);
+  color: var(--navy-deep);
+  font-size: 10px;
+  font-weight: 750;
+  letter-spacing: .01em;
+}
+
+.ledger-scope-select:focus,
+#reportScope:focus {
+  border-color: var(--gold);
+  box-shadow: 0 0 0 3px rgba(200,154,67,.10);
+}
+
+.report-scope-control {
+  min-width: 182px;
+}
+
+#reportsPanel .report-actions select {
+  min-height: 44px;
+  border-radius: 12px;
+}
+
+/* The long new feature name is allowed to wrap cleanly instead of
+   compressing or clipping the Teller Desk navigation. */
+.teller-nav button[data-panel="lastBalancePanel"] {
+  line-height: 1.35;
+}
+
+@media (max-width: 780px) {
+  .ledger-filter-tools {
+    grid-template-columns: minmax(0,1fr) 38px !important;
+    align-items: end;
+  }
+
+  .ledger-scope-control {
+    grid-column: 1;
+    grid-row: 1;
+    min-width: 0;
+  }
+
+  .ledger-filter-tools > .icon-button {
+    grid-column: 2;
+    grid-row: 1;
+  }
+
+  .ledger-filter-tools > .ledger-month-control:not(.is-hidden) {
+    grid-column: 1 / -1;
+    grid-row: 2;
+    width: 100%;
+    min-width: 0;
+  }
+
+  .ledger-filter-tools > .ledger-month-control:not(.is-hidden) input {
+    width: 100%;
+  }
+
+  .ledger-filter-tools > #transactionCount {
+    grid-column: 1 / -1 !important;
+    grid-row: 3 !important;
+    justify-self: end;
+    margin-top: 1px;
+  }
+
+  .ledger-scope-control > span,
+  .ledger-month-control > span {
+    font-size: 6px;
+  }
+
+  .ledger-scope-select {
+    min-height: 36px;
+    border-radius: 11px;
+    background: var(--mobile-soft);
+    font-size: 9px;
+  }
+
+  #reportsPanel .report-actions {
+    grid-template-columns: minmax(0,1fr) minmax(0,1fr);
+  }
+
+  #reportsPanel .report-scope-control {
+    grid-column: 1 / -1;
+    min-width: 0;
+    min-height: 0;
+  }
+
+  #reportsPanel .report-scope-control > span {
+    font-size: 6px;
+  }
+
+  #reportsPanel #reportScope {
+    min-height: 42px;
+    background: #f8f7f2;
+    font-size: 10px;
+  }
+
+  #reportsPanel #reportMonth:not(.is-hidden) {
+    grid-column: 1 / -1;
+    width: 100%;
+  }
+
+  #reportsPanel #loadReportButton {
+    grid-column: 1 / -1;
+    width: 100%;
+  }
+
+  #reportsPanel .report-search {
+    grid-column: 1 / -1;
+  }
+}
+
+@media (max-width: 520px) {
+  .ledger-scope-control,
+  .report-scope-control {
+    width: 100%;
+  }
+
+  .teller-nav button[data-panel="lastBalancePanel"] {
+    max-width: 210px;
+    white-space: normal;
+  }
+}

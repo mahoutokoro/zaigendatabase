@@ -24,8 +24,15 @@ const CONFIG = {
   BATCH_SECOND_CONFIRM_MS: 6500,
   BATCH_RECORDED_GRACE_MS: 900,
 
-  // Kept for edit/delete requests that still use readable POST responses.
-  POST_TIMEOUT_MS: 30000
+  // Edit/delete use readable POST responses plus public-ledger verification.
+  POST_TIMEOUT_MS: 30000,
+  MUTATION_POST_TIMEOUT_MS: 16000,
+  MUTATION_STATUS_INTERVAL_MS: 350,
+  MUTATION_STATUS_TIMEOUT_MS: 2800,
+  MUTATION_VERIFY_INTERVAL_MS: 450,
+  MUTATION_VERIFY_TIMEOUT_MS: 4200,
+  MUTATION_MAX_ATTEMPTS: 2,
+  REPORT_LOAD_CONCURRENCY: 4
 };
 
 const state = {
@@ -37,10 +44,15 @@ const state = {
   teller: null,
   currentAccount: null,
   currentTransactions: [],
+  currentAllTransactions: [],
+  currentLedgerScope: 'ALL',
   currentLedgerMonth: '',
   ledgerLoadToken: 0,
   ledgerLoading: false,
   reportRows: [],
+  reportScope: 'ALL',
+  reportLoadToken: 0,
+  reportMonths: [],
   syncingSharedData: false,
   batchModes: {
     TRANSFER: 'STANDARD',
@@ -79,6 +91,8 @@ document.addEventListener('DOMContentLoaded', async () => {
   bindGlobalEvents();
   initializeRowControls();
   setDefaultMonth();
+  updateLedgerScopeUi();
+  updateReportScopeUi();
   renderAllBatchGrids();
   ['TRANSFER','SALARY','REWARD'].forEach(applyBatchModeVisuals);
   ['LAST_SALDO','TRANSFER','SALARY','REWARD'].forEach(applyDescriptionModeVisuals);
@@ -103,10 +117,10 @@ function cacheElements() {
     'headerSearchForm','headerSearchInput','heroSearchForm','heroSearchInput','welcomeView','accountView',
     'profilePhoto','profileStatusBadge','profileName','profileKanji','profileAccount','profileX','profileBalance',
     'balanceStatusText','transactionTableBody','transactionCount','transactionEmpty','refreshAccountButton',
-    'ledgerMonth','transactionLoading','transactionScrollWrap','ledgerScrollNav','ledgerScrollTop','ledgerScrollBottom',
+    'ledgerScope','ledgerMonthControl','ledgerMonth','transactionLoading','transactionScrollWrap','ledgerScrollNav','ledgerScrollTop','ledgerScrollBottom',
     'tellerButton','tellerLoginModal','tellerLoginForm','tellerIdInput','tellerPasswordInput','tellerWorkspace',
     'loggedTellerName','loggedTellerId','tellerLogoutButton','closeWorkspaceButton','tellerNav',
-    'loadingOverlay','loadingText','toastRegion','reportMonth','loadReportButton','reportSearchInput','reportSearchButton','exportPdfButton','exportPngButton',
+    'loadingOverlay','loadingText','toastRegion','reportScope','reportMonth','loadReportButton','reportSearchInput','reportSearchButton','exportPdfButton','exportPngButton',
     'reportMonthLabel','reportTableBody','reportEmpty','reportDocument','editTransactionModal','editTransactionForm',
     'editTransactionId','editTransactionDate','editTransactionAmount','editTransactionDescription','editTransactionStaff',
     'bankLogo','workspaceLogo','tellerLoginLogo','tellerPasswordToggle','allAccountSearch','allAccountStatusFilter','allAccountTableBody',
@@ -234,10 +248,16 @@ function bindGlobalEvents() {
     if (state.currentAccount) refreshCurrentAccountView();
   });
 
+  els.ledgerScope.addEventListener('change', () => {
+    state.currentLedgerScope = els.ledgerScope.value === 'MONTH' ? 'MONTH' : 'ALL';
+    updateLedgerScopeUi();
+    renderCurrentLedgerSelection();
+  });
+
   els.ledgerMonth.addEventListener('change', () => {
     if (!state.currentAccount || !els.ledgerMonth.value) return;
     state.currentLedgerMonth = els.ledgerMonth.value;
-    loadLedgerMonth(state.currentAccount, state.currentLedgerMonth);
+    if (state.currentLedgerScope === 'MONTH') renderCurrentLedgerSelection();
   });
 
   els.ledgerScrollTop.addEventListener('click', () => {
@@ -355,7 +375,14 @@ function bindGlobalEvents() {
   });
 
   els.loadReportButton.addEventListener('click', loadMonthlyReport);
-  els.reportMonth.addEventListener('change', loadMonthlyReport);
+  els.reportScope.addEventListener('change', () => {
+    state.reportScope = els.reportScope.value === 'MONTH' ? 'MONTH' : 'ALL';
+    updateReportScopeUi();
+    loadMonthlyReport();
+  });
+  els.reportMonth.addEventListener('change', () => {
+    if (state.reportScope === 'MONTH') loadMonthlyReport();
+  });
   els.reportSearchButton.addEventListener('click', searchTransactionInputs);
   els.reportSearchInput.addEventListener('keydown', event => {
     if (event.key === 'Enter') {
@@ -393,7 +420,14 @@ function initializeRowControls() {
 
 function setDefaultMonth() {
   const now = new Date();
-  els.reportMonth.value = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+  const month = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+  els.reportMonth.value = month;
+  els.ledgerMonth.value = month;
+  state.currentLedgerMonth = month;
+  state.currentLedgerScope = 'ALL';
+  state.reportScope = 'ALL';
+  if (els.ledgerScope) els.ledgerScope.value = 'ALL';
+  if (els.reportScope) els.reportScope.value = 'ALL';
 }
 
 async function loadMasterData() {
@@ -537,70 +571,66 @@ function refreshBulkProviderOptions() {
   });
 }
 
-async function loadPublicAccountTransactions(account, month) {
+async function loadPublicAccountTransactions(account) {
   /*
-    PERFORMANCE:
-    The old ledger downloaded the entire TRANSACTION LOG before the account
-    page could finish opening. The ledger now requests only the selected month.
+    ACCOUNT LEDGER DEFAULT = ALL TRANSACTIONS.
 
-    We intentionally query every transaction in that month (not only this
-    account), because paired -D / -C rows are needed to resolve Sender /
-    Recipient correctly. One month is still dramatically smaller than the
-    complete historical log.
+    The profile still renders first from MASTER DATA. Transaction history then
+    loads independently in the background, so showing the complete ledger does
+    not block the account identity or balance from appearing.
+
+    For efficiency we fetch all A-E rows only for the selected account. A much
+    lighter A/C route index is fetched separately so paired -D / -C rows can
+    still resolve Sender / Recipient across the complete history.
   */
   const target = normalizeAccount(account);
-  const normalizedMonth = normalizeLedgerMonth(month);
-  const { startDate, endDate } = ledgerMonthRange(normalizedMonth);
+  const escapedAccount = gvizString(target);
 
-  let rows;
-
-  try {
-    rows = await fetchGvizSheet(
-      'TRANSACTION LOG',
-      `select A,B,C,D,E where B >= date '${startDate}' and B < date '${endDate}'`,
-      1
-    );
-  } catch (dateQueryError) {
-    /*
-      Compatibility fallback for an older sheet where Date may have been stored
-      as text. This fallback reads only the target account's history, then
-      filters locally by month. Pair names may be unavailable for legacy rows,
-      but the ledger remains usable instead of failing.
-    */
-    console.warn('Month-scoped TRANSACTION LOG query fallback:', dateQueryError);
-
-    const escapedAccount = gvizString(target);
-    rows = await fetchGvizSheet(
+  const [accountRows, routeRows] = await Promise.all([
+    fetchGvizSheet(
       'TRANSACTION LOG',
       `select A,B,C,D,E where C = '${escapedAccount}'`,
       1
-    );
-  }
+    ),
+    fetchGvizSheet(
+      'TRANSACTION LOG',
+      'select A,C',
+      1
+    )
+  ]);
 
-  const allTransactions = rows
-    .map(row => ({
+  const transactions = accountRows
+    .map((row, index) => ({
       txId: cellText(row[0]),
       date: cellText(row[1]),
       accountNumber: cellText(row[2]),
       log: cellText(row[3]),
-      description: cellText(row[4])
+      description: cellText(row[4]),
+      _rowIndex: index
     }))
-    .filter(row => row.accountNumber)
-    .filter(row => transactionMatchesMonth(row, normalizedMonth));
+    .filter(row => normalizeAccount(row.accountNumber) === target);
 
   const byTxId = new Map(
-    allTransactions
+    routeRows
+      .map(row => ({
+        txId: cellText(row[0]),
+        accountNumber: cellText(row[1])
+      }))
       .filter(row => row.txId)
       .map(row => [row.txId, row])
   );
 
-  return allTransactions
-    .filter(row => normalizeAccount(row.accountNumber) === target)
+  return transactions
     .map(row => ({
       ...row,
       ...resolveTransactionCounterparty(row, byTxId)
     }))
-    .reverse();
+    .sort((a, b) => {
+      const dateDiff = transactionSortValue(b) - transactionSortValue(a);
+      if (dateDiff) return dateDiff;
+      return Number(b._rowIndex || 0) - Number(a._rowIndex || 0);
+    })
+    .map(({ _rowIndex, ...row }) => row);
 }
 
 function normalizeLedgerMonth(value) {
@@ -631,6 +661,13 @@ function ledgerMonthRange(month) {
 function transactionMatchesMonth(row, month) {
   const normalized = normalizeDateForInput(row.date);
   return Boolean(normalized && normalized.slice(0, 7) === month);
+}
+
+function transactionSortValue(row) {
+  const normalized = normalizeDateForInput(row?.date || row?.transactionDate || '');
+  if (!normalized) return 0;
+  const [year, month, day] = normalized.split('-').map(Number);
+  return new Date(year, month - 1, day).getTime();
 }
 
 
@@ -767,6 +804,7 @@ function goToHome() {
 
   state.currentAccount = null;
   state.currentTransactions = [];
+  state.currentAllTransactions = [];
   state.ledgerLoadToken += 1;
   state.ledgerLoading = false;
 
@@ -888,6 +926,7 @@ async function searchAccount(rawAccount, silent = false) {
 
   state.currentAccount = account;
   state.currentTransactions = [];
+  state.currentAllTransactions = [];
   state.ledgerLoadToken += 1;
 
   renderProfile(masterRecordToProfile(record));
@@ -901,16 +940,19 @@ async function searchAccount(rawAccount, silent = false) {
 
   if (openingNewAccount || !state.currentLedgerMonth) {
     state.currentLedgerMonth = currentMonthValue();
+    state.currentLedgerScope = 'ALL';
   }
 
+  els.ledgerScope.value = state.currentLedgerScope;
   els.ledgerMonth.value = state.currentLedgerMonth;
+  updateLedgerScopeUi();
 
   // Identity is now visible. Transaction history loads independently below.
   if (!silent) {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 
-  loadLedgerMonth(account, state.currentLedgerMonth);
+  loadLedgerHistory(account);
 
   /*
     Refresh the exact MASTER record in the background. This can update a balance
@@ -992,45 +1034,50 @@ async function refreshCurrentAccountView() {
   if (!state.currentAccount) return;
 
   const account = state.currentAccount;
-  const month = els.ledgerMonth.value || state.currentLedgerMonth || currentMonthValue();
-
-  state.currentLedgerMonth = month;
+  state.currentLedgerMonth = els.ledgerMonth.value || state.currentLedgerMonth || currentMonthValue();
 
   const latest = state.masterMap.get(account);
   if (latest) {
     renderProfile(masterRecordToProfile(latest));
   }
 
-  // Both refreshes are background-friendly and the profile remains visible.
+  // Identity stays visible while MASTER DATA and the complete ledger refresh.
   refreshVisibleAccountProfile(account);
-  loadLedgerMonth(account, month);
+  loadLedgerHistory(account);
 }
 
-async function loadLedgerMonth(account, month) {
-  account = normalizeAccount(account);
-  month = normalizeLedgerMonth(month);
+function updateLedgerScopeUi() {
+  const scope = state.currentLedgerScope === 'MONTH' ? 'MONTH' : 'ALL';
+  state.currentLedgerScope = scope;
 
+  if (els.ledgerScope) els.ledgerScope.value = scope;
+  if (els.ledgerMonthControl) {
+    els.ledgerMonthControl.classList.toggle('is-hidden', scope !== 'MONTH');
+  }
+  if (els.ledgerMonth) {
+    els.ledgerMonth.disabled = scope !== 'MONTH';
+  }
+}
+
+async function loadLedgerHistory(account) {
+  account = normalizeAccount(account);
   if (!account || state.currentAccount !== account) return;
 
   const token = ++state.ledgerLoadToken;
-  state.currentLedgerMonth = month;
-  els.ledgerMonth.value = month;
-
   setLedgerLoading(true);
 
   try {
-    const rows = await loadPublicAccountTransactions(account, month);
+    const rows = await loadPublicAccountTransactions(account);
 
     if (
       token !== state.ledgerLoadToken ||
-      state.currentAccount !== account ||
-      state.currentLedgerMonth !== month
+      state.currentAccount !== account
     ) {
       return;
     }
 
-    state.currentTransactions = rows;
-    renderTransactions(rows);
+    state.currentAllTransactions = rows;
+    renderCurrentLedgerSelection();
 
   } catch (error) {
     if (
@@ -1040,16 +1087,53 @@ async function loadLedgerMonth(account, month) {
       return;
     }
 
+    state.currentAllTransactions = [];
     state.currentTransactions = [];
     renderTransactions([]);
-    toast('Unable to load this month’s transaction history.', 'error');
-    console.warn('Monthly ledger load failed:', error);
+    toast('Unable to load the transaction history.', 'error');
+    console.warn('Complete ledger load failed:', error);
 
   } finally {
     if (token === state.ledgerLoadToken) {
       setLedgerLoading(false);
     }
   }
+}
+
+function renderCurrentLedgerSelection() {
+  if (!state.currentAccount) return;
+
+  const scope = state.currentLedgerScope === 'MONTH' ? 'MONTH' : 'ALL';
+  let rows = state.currentAllTransactions || [];
+
+  if (scope === 'MONTH') {
+    const month = normalizeLedgerMonth(
+      els.ledgerMonth?.value || state.currentLedgerMonth || currentMonthValue()
+    );
+    state.currentLedgerMonth = month;
+    if (els.ledgerMonth) els.ledgerMonth.value = month;
+    rows = rows.filter(row => transactionMatchesMonth(row, month));
+  }
+
+  state.currentTransactions = rows;
+  renderTransactions(rows);
+}
+
+// Compatibility alias for older internal calls. The full history is loaded once;
+// month filtering is now performed locally so ALL remains the default view.
+async function loadLedgerMonth(account, month) {
+  state.currentLedgerScope = 'MONTH';
+  state.currentLedgerMonth = normalizeLedgerMonth(month);
+  if (els.ledgerScope) els.ledgerScope.value = 'MONTH';
+  if (els.ledgerMonth) els.ledgerMonth.value = state.currentLedgerMonth;
+  updateLedgerScopeUi();
+
+  if (state.currentAccount === normalizeAccount(account) && state.currentAllTransactions.length) {
+    renderCurrentLedgerSelection();
+    return;
+  }
+
+  return loadLedgerHistory(account);
 }
 
 function setLedgerLoading(loading) {
@@ -1129,11 +1213,11 @@ function renderProfile(profile) {
 function renderTransactions(rows) {
   els.transactionTableBody.innerHTML = '';
 
-  const monthText = state.currentLedgerMonth
+  const scopeText = state.currentLedgerScope === 'MONTH'
     ? monthLabel(state.currentLedgerMonth)
-    : '';
+    : 'All transactions';
 
-  els.transactionCount.textContent = `${rows.length} record${rows.length === 1 ? '' : 's'}${monthText ? ` · ${monthText}` : ''}`;
+  els.transactionCount.textContent = `${rows.length} record${rows.length === 1 ? '' : 's'} · ${scopeText}`;
   els.transactionEmpty.classList.toggle('is-hidden', rows.length !== 0);
 
   rows.forEach(row => {
@@ -2730,24 +2814,144 @@ function roleLabel(role) {
   return role.charAt(0).toUpperCase() + role.slice(1);
 }
 
+function updateReportScopeUi() {
+  const scope = state.reportScope === 'MONTH' ? 'MONTH' : 'ALL';
+  state.reportScope = scope;
+
+  if (els.reportScope) els.reportScope.value = scope;
+  if (els.reportMonth) {
+    els.reportMonth.classList.toggle('is-hidden', scope !== 'MONTH');
+    els.reportMonth.disabled = scope !== 'MONTH';
+  }
+  if (els.loadReportButton) {
+    els.loadReportButton.textContent = scope === 'MONTH' ? 'LOAD MONTH' : 'LOAD ALL';
+  }
+}
+
 async function loadMonthlyReport() {
-  if (!state.teller || !els.reportMonth.value) return;
-  showLoading('Loading monthly register…');
+  if (!state.teller) return;
+
+  const scope = state.reportScope === 'MONTH' ? 'MONTH' : 'ALL';
+  const selectedMonth = els.reportMonth.value || currentMonthValue();
+  const token = ++state.reportLoadToken;
+
+  showLoading(scope === 'MONTH' ? 'Loading monthly register…' : 'Loading complete transaction register…');
+
   try {
-    const result = await apiGet({ action: 'monthlyLog', month: els.reportMonth.value });
-    if (!result.success) throw new Error(result.message || 'Unable to load report');
-    state.reportRows = result.data || [];
+    let rows = [];
+
+    if (scope === 'MONTH') {
+      rows = await loadReportMonthRows(selectedMonth);
+    } else {
+      rows = await loadAllReportRows();
+    }
+
+    if (token !== state.reportLoadToken) return;
+
+    state.reportRows = rows;
 
     if (els.reportSearchInput?.value.trim()) {
       searchTransactionInputs();
     } else {
-      renderMonthlyReport(state.reportRows, els.reportMonth.value);
+      renderMonthlyReport(state.reportRows, selectedMonth);
     }
   } catch (error) {
-    toast(error.message, 'error');
+    if (token !== state.reportLoadToken) return;
+    toast(error.message || 'Unable to load transaction inputs.', 'error');
   } finally {
-    hideLoading();
+    if (token === state.reportLoadToken) hideLoading();
   }
+}
+
+async function loadReportMonthRows(month) {
+  const normalizedMonth = normalizeLedgerMonth(month);
+  const result = await apiGet({ action: 'monthlyLog', month: normalizedMonth });
+  if (!result?.success) throw new Error(result?.message || `Unable to load ${monthLabel(normalizedMonth)}.`);
+  return result.data || [];
+}
+
+async function discoverTransactionMonths() {
+  const rows = await fetchGvizSheet(
+    'TRANSACTION LOG',
+    'select B',
+    1
+  );
+
+  const months = [...new Set(
+    rows
+      .map(row => normalizeDateForInput(cellText(row[0])))
+      .filter(Boolean)
+      .map(date => date.slice(0, 7))
+  )].sort((a, b) => b.localeCompare(a));
+
+  state.reportMonths = months;
+  return months;
+}
+
+async function loadAllReportRows() {
+  const months = await discoverTransactionMonths();
+  if (!months.length) return [];
+
+  const results = await mapWithConcurrency(
+    months,
+    CONFIG.REPORT_LOAD_CONCURRENCY,
+    async month => {
+      let lastError = null;
+
+      for (let attempt = 1; attempt <= 2; attempt++) {
+        try {
+          return {
+            month,
+            rows: await loadReportMonthRows(month),
+            error: null
+          };
+        } catch (error) {
+          lastError = error;
+          if (attempt < 2) await delay(350);
+        }
+      }
+
+      return {
+        month,
+        rows: [],
+        error: lastError || new Error('Unknown report loading error')
+      };
+    }
+  );
+
+  const failed = results.filter(result => result.error);
+  const successfulRows = results.flatMap(result => result.rows || []);
+
+  if (failed.length && !successfulRows.length) {
+    throw new Error(`Transaction register could not be loaded. ${failed[0].error?.message || ''}`.trim());
+  }
+
+  if (failed.length) {
+    const labels = failed.slice(0, 3).map(result => monthLabel(result.month)).join(', ');
+    const extra = failed.length > 3 ? ` +${failed.length - 3} more` : '';
+    toast(`Most transaction history loaded, but ${labels}${extra} could not be read.`, 'error');
+  }
+
+  return successfulRows;
+}
+
+async function mapWithConcurrency(items, limit, worker) {
+  const list = Array.from(items || []);
+  if (!list.length) return [];
+
+  const results = new Array(list.length);
+  let cursor = 0;
+
+  async function runner() {
+    while (cursor < list.length) {
+      const index = cursor++;
+      results[index] = await worker(list[index], index);
+    }
+  }
+
+  const workerCount = Math.max(1, Math.min(Number(limit) || 1, list.length));
+  await Promise.all(Array.from({ length: workerCount }, () => runner()));
+  return results;
 }
 
 function reportTransactionKey(row, index = 0) {
@@ -2765,7 +2969,7 @@ function groupReportTransactions(rows) {
     grouped.get(key).rows.push(row);
   });
 
-  return [...grouped.values()].map(group => {
+  const groups = [...grouped.values()].map(group => {
     const members = group.rows;
     const debit = members.find(row => /-D$/i.test(String(row.txId || ''))) || members.find(row => parseMoney(row.log) < 0) || null;
     const credit = members.find(row => /-C$/i.test(String(row.txId || ''))) || members.find(row => parseMoney(row.log) > 0 && row !== debit) || null;
@@ -2777,7 +2981,9 @@ function groupReportTransactions(rows) {
     const amountRow = debit || credit || anchor;
     const amount = Math.abs(parseMoney(amountRow.log));
     const txIds = members.map(row => String(row.txId || '').trim()).filter(Boolean);
-    const canEdit = members.length > 0 && members.every(row => Boolean(row.canEdit && row.txId));
+    // Frontend revision controls are no longer time-limited. Any persisted
+    // transaction row with a Transaction ID can be revised or deleted.
+    const canEdit = members.length > 0 && members.every(row => Boolean(row.txId));
 
     return {
       key: group.key,
@@ -2803,6 +3009,12 @@ function groupReportTransactions(rows) {
       } : null
     };
   });
+
+  return groups.sort((a, b) => {
+    const dateDiff = transactionSortValue(b) - transactionSortValue(a);
+    if (dateDiff) return dateDiff;
+    return String(b.displayId || '').localeCompare(String(a.displayId || ''));
+  });
 }
 
 function findReportTransactionGroup(groupKey) {
@@ -2826,7 +3038,7 @@ function searchTransactionInputs() {
   renderMonthlyReportGroups(matches, els.reportMonth.value);
 
   if (!matches.length) {
-    toast(`No Transaction ID matching "${els.reportSearchInput.value.trim()}" was found in this month.`, 'error');
+    toast(`No Transaction ID matching "${els.reportSearchInput.value.trim()}" was found in the current register view.`, 'error');
   } else {
     toast(`${matches.length} matching transaction${matches.length === 1 ? '' : 's'} found.`, 'success');
   }
@@ -2838,7 +3050,7 @@ function renderMonthlyReport(rows, month) {
 
 function renderMonthlyReportGroups(groups, month) {
   els.reportTableBody.innerHTML = '';
-  els.reportMonthLabel.textContent = monthLabel(month);
+  els.reportMonthLabel.textContent = state.reportScope === 'MONTH' ? monthLabel(month) : 'ALL TRANSACTIONS';
   els.reportEmpty.classList.toggle('is-hidden', groups.length !== 0);
 
   groups.forEach(group => {
@@ -2935,80 +3147,303 @@ function openEditTransaction(groupKey) {
 
 async function saveTransactionRevision(event) {
   event.preventDefault();
+
+  if (!state.teller) return toast('Teller session is required.', 'error');
+
   const groupKey = els.editTransactionId.value;
   const group = findReportTransactionGroup(groupKey);
   const staff = state.staff.find(x => x.id === els.editTransactionStaff.value);
   const raw = els.editTransactionAmount.dataset.rawValue || els.editTransactionAmount.value.replace(/,/g, '');
   const amount = Number(raw);
+  const newDate = els.editTransactionDate.value;
+  const newDescription = els.editTransactionDescription.value.trim();
 
-  if (!group) return toast('Transaction group could not be found. Reload the month and try again.', 'error');
+  if (!group) return toast('Transaction group could not be found. Reload the register and try again.', 'error');
   if (!staff) return toast('Select the input staff.', 'error');
-  if (!els.editTransactionDescription.value.trim()) return toast('Description is mandatory.', 'error');
+  if (!newDate) return toast('Transaction date is required.', 'error');
+  if (!newDescription) return toast('Description is mandatory.', 'error');
   if (!amount || amount <= 0) return toast('Amount must be greater than zero.', 'error');
 
+  /*
+    IMPORTANT:
+    A paired -D / -C transaction is ONE backend transaction group.
+    The backend's updateTransaction_() already updates both ledger rows together.
+
+    The previous frontend called updateTransaction once for every row in the
+    pair. That duplicated server work and made a successful first mutation look
+    like a backend failure when the second request arrived during propagation.
+
+    Send exactly ONE mutation command for the whole group.
+  */
+  const targetRow =
+    group.rows.find(row => /-D$/i.test(String(row.txId || ''))) ||
+    group.rows[0];
+
+  const targetTxId = String(targetRow?.txId || '').trim();
+  if (!targetTxId) return toast('Transaction ID is missing. Reload the register and try again.', 'error');
+
+  const payload = {
+    txId: targetTxId,
+    date: newDate,
+    log: amount,
+    description: newDescription,
+    inputStaffId: staff.id,
+    inputStaffName: staff.name,
+    tellerId: state.teller.id,
+    tellerName: state.teller.name,
+    clientMutationId: createClientRequestId()
+  };
+
   showLoading(group.paired ? 'Saving paired transaction revision…' : 'Saving revision…');
+
   try {
-    for (const original of group.rows) {
-      const signedAmount = parseMoney(original.log) < 0 ? -amount : amount;
-      const result = await apiPost('updateTransaction', {
-        txId: original.txId,
-        date: els.editTransactionDate.value,
-        log: signedAmount,
-        description: els.editTransactionDescription.value.trim(),
-        inputStaffId: staff.id,
-        inputStaffName: staff.name,
-        tellerId: state.teller.id,
-        tellerName: state.teller.name
-      });
-      if (!result.success) throw new Error(result.message || `Revision failed for ${original.txId}`);
-    }
+    await runVerifiedTransactionMutation(
+      'updateTransaction',
+      payload,
+      async () => {
+        const persistedRows = await Promise.all(
+          group.rows.map(original => fetchPublicTransactionById(original.txId))
+        );
+
+        if (persistedRows.some(row => !row)) return false;
+
+        return persistedRows.every((persisted, index) => {
+          const original = group.rows[index];
+          const expectedLog = parseMoney(original.log) < 0 ? -amount : amount;
+
+          return normalizeDateForInput(persisted.date) === normalizeDateForInput(newDate) &&
+            parseMoney(persisted.log) === expectedLog &&
+            String(persisted.description || '').trim() === newDescription;
+        });
+      },
+      `Revision failed for ${group.displayId || targetTxId}`
+    );
 
     closeModal('editTransactionModal');
     toast(group.paired ? 'Transaction pair revised together.' : 'Transaction revised.', 'success');
+
     await refreshSharedData();
     await loadMonthlyReport();
     if (state.currentAccount) await refreshCurrentAccountView();
   } catch (error) {
-    toast(error.message, 'error');
+    toast(error.message || 'Transaction revision failed.', 'error');
   } finally {
     hideLoading();
   }
 }
 
 async function deleteTransaction(groupKey) {
+  if (!state.teller) return toast('Teller session is required.', 'error');
+
   const group = findReportTransactionGroup(groupKey);
   if (!group) return;
 
   const scopeText = group.paired
     ? `Delete transaction ${group.displayId}? Both sender and recipient log rows will be deleted together.`
-    : `Delete transaction ${group.displayId}? This is only permitted within one month of creation.`;
+    : `Delete transaction ${group.displayId}? This action removes the ledger entry permanently.`;
   const ok = window.confirm(scopeText);
   if (!ok) return;
 
+  /*
+    Just like revision, paired deletion is a single backend operation.
+    Calling deleteTransaction for -D and then -C separately caused the second
+    call to report "transaction not found" after the first call had already
+    deleted both rows.
+  */
+  const targetRow =
+    group.rows.find(row => /-D$/i.test(String(row.txId || ''))) ||
+    group.rows[0];
+
+  const targetTxId = String(targetRow?.txId || '').trim();
+  if (!targetTxId) return toast('Transaction ID is missing. Reload the register and try again.', 'error');
+
+  const payload = {
+    txId: targetTxId,
+    tellerId: state.teller.id,
+    tellerName: state.teller.name,
+    clientMutationId: createClientRequestId()
+  };
+
   showLoading(group.paired ? 'Deleting paired transaction…' : 'Deleting transaction…');
+
   try {
-    for (const row of group.rows) {
-      const result = await apiPost('deleteTransaction', {
-        txId: row.txId,
-        tellerId: state.teller.id,
-        tellerName: state.teller.name
-      });
-      if (!result.success) throw new Error(result.message || `Delete failed for ${row.txId}`);
-    }
+    await runVerifiedTransactionMutation(
+      'deleteTransaction',
+      payload,
+      async () => {
+        const persistedRows = await Promise.all(
+          group.txIds.map(txId => fetchPublicTransactionById(txId))
+        );
+        return persistedRows.every(row => !row);
+      },
+      `Delete failed for ${group.displayId || targetTxId}`
+    );
 
     toast(group.paired ? 'Transaction pair deleted.' : 'Transaction deleted.', 'success');
     await refreshSharedData();
     await loadMonthlyReport();
     if (state.currentAccount) await refreshCurrentAccountView();
   } catch (error) {
-    toast(error.message, 'error');
+    toast(error.message || 'Transaction deletion failed.', 'error');
   } finally {
     hideLoading();
   }
 }
 
+async function runVerifiedTransactionMutation(action, payload, verify, fallbackMessage) {
+  let lastError = null;
+
+  for (let attempt = 1; attempt <= CONFIG.MUTATION_MAX_ATTEMPTS; attempt++) {
+    let definitiveBackendRejection = false;
+
+    try {
+      const result = await apiPost(action, {
+        ...payload,
+        clientMutationAttempt: attempt
+      }, {
+        timeoutMs: CONFIG.MUTATION_POST_TIMEOUT_MS
+      });
+
+      if (result?.success) return result;
+
+      lastError = new Error(result?.message || fallbackMessage || 'Transaction mutation failed.');
+      definitiveBackendRejection = true;
+    } catch (error) {
+      lastError = error;
+    }
+
+    /*
+      A readable success:false response is a real validation rejection.
+      For timeout / redirect / gateway failures, first ask the backend mutation
+      receipt endpoint using the SAME clientMutationId. This is faster and more
+      reliable than assuming the POST failed.
+    */
+    if (!definitiveBackendRejection && payload.clientMutationId) {
+      const receipt = await waitForMutationReceipt(
+        action,
+        payload.clientMutationId,
+        CONFIG.MUTATION_STATUS_TIMEOUT_MS
+      );
+
+      if (receipt) return receipt;
+    }
+
+    // Public-sheet verification remains the fallback source of truth. It also
+    // covers the rare case where Apps Script finished the sheet write but the
+    // response/receipt was delayed.
+    const recovered = await waitForMutationVerification(
+      verify,
+      definitiveBackendRejection ? 1200 : CONFIG.MUTATION_VERIFY_TIMEOUT_MS
+    );
+
+    if (recovered) {
+      return {
+        success: true,
+        recovered: true
+      };
+    }
+
+    if (definitiveBackendRejection) throw lastError;
+
+    if (attempt < CONFIG.MUTATION_MAX_ATTEMPTS) {
+      await delay(350);
+    }
+  }
+
+  if (payload.clientMutationId) {
+    const receipt = await waitForMutationReceipt(
+      action,
+      payload.clientMutationId,
+      CONFIG.MUTATION_STATUS_TIMEOUT_MS
+    );
+
+    if (receipt) return receipt;
+  }
+
+  // One final public verification avoids a false error during spreadsheet
+  // propagation immediately after the second ambiguous POST attempt.
+  if (await waitForMutationVerification(verify)) {
+    return {
+      success: true,
+      recovered: true
+    };
+  }
+
+  throw lastError || new Error(fallbackMessage || 'Transaction mutation failed.');
+}
+
+async function waitForMutationReceipt(action, requestId, timeoutMs = CONFIG.MUTATION_STATUS_TIMEOUT_MS) {
+  const normalizedRequestId = String(requestId || '').trim();
+  if (!normalizedRequestId) return null;
+
+  const startedAt = Date.now();
+
+  while (Date.now() - startedAt < timeoutMs) {
+    try {
+      const status = await apiGet({
+        action: 'mutationStatus',
+        mutationAction: action,
+        requestId: normalizedRequestId
+      });
+
+      if (status?.success && status.state === 'COMPLETED') {
+        return status.result || {
+          success: true,
+          recovered: true,
+          idempotent: true
+        };
+      }
+    } catch (error) {
+      console.warn('Transaction mutation receipt warning:', error);
+    }
+
+    await delay(CONFIG.MUTATION_STATUS_INTERVAL_MS);
+  }
+
+  return null;
+}
+
+async function waitForMutationVerification(verify, timeoutMs = CONFIG.MUTATION_VERIFY_TIMEOUT_MS) {
+  const startedAt = Date.now();
+
+  while (Date.now() - startedAt < timeoutMs) {
+    try {
+      if (await verify()) return true;
+    } catch (error) {
+      console.warn('Transaction mutation verification warning:', error);
+    }
+
+    await delay(CONFIG.MUTATION_VERIFY_INTERVAL_MS);
+  }
+
+  return false;
+}
+
+async function fetchPublicTransactionById(txId) {
+  const id = String(txId || '').trim();
+  if (!id) return null;
+
+  const rows = await fetchGvizSheet(
+    'TRANSACTION LOG',
+    `select A,B,C,D,E where A = '${gvizString(id)}'`,
+    1
+  );
+
+  const match = rows
+    .map(row => ({
+      txId: cellText(row[0]),
+      date: cellText(row[1]),
+      accountNumber: cellText(row[2]),
+      log: cellText(row[3]),
+      description: cellText(row[4])
+    }))
+    .find(row => String(row.txId || '').trim() === id);
+
+  return match || null;
+}
+
 async function exportReportPng() {
-  if (!state.reportRows.length) return toast('Load a month with transaction records first.', 'error');
+  if (!state.reportRows.length) return toast('Load transaction records first.', 'error');
   showLoading('Rendering PNG…');
   try {
     const clone = prepareReportForExport();
@@ -3016,7 +3451,7 @@ async function exportReportPng() {
     const canvas = await html2canvas(clone, { scale: 2, backgroundColor: '#ffffff', useCORS: true });
     clone.remove();
     const link = document.createElement('a');
-    link.download = `transaction-inputs-${els.reportMonth.value}.png`;
+    link.download = `transaction-inputs-${reportExportSlug()}.png`;
     link.href = canvas.toDataURL('image/png');
     link.click();
   } catch (error) {
@@ -3027,7 +3462,7 @@ async function exportReportPng() {
 }
 
 async function exportReportPdf() {
-  if (!state.reportRows.length) return toast('Load a month with transaction records first.', 'error');
+  if (!state.reportRows.length) return toast('Load transaction records first.', 'error');
   showLoading('Rendering PDF…');
   try {
     const clone = prepareReportForExport();
@@ -3053,13 +3488,19 @@ async function exportReportPdf() {
       pdf.addImage(img, 'PNG', margin, position, imgWidth, imgHeight);
       heightLeft -= pageHeight - margin * 2;
     }
-    pdf.save(`transaction-inputs-${els.reportMonth.value}.pdf`);
+    pdf.save(`transaction-inputs-${reportExportSlug()}.pdf`);
   } catch (error) {
     console.error(error);
     toast('PDF export failed.', 'error');
   } finally {
     hideLoading();
   }
+}
+
+function reportExportSlug() {
+  return state.reportScope === 'MONTH'
+    ? (els.reportMonth.value || currentMonthValue())
+    : 'all-transactions';
 }
 
 function prepareReportForExport() {
@@ -3205,8 +3646,46 @@ function formatDateDisplay(value) {
 
 function normalizeDateForInput(value) {
   if (!value) return '';
-  if (/^\d{4}-\d{2}-\d{2}$/.test(String(value))) return String(value);
-  const date = new Date(value);
+
+  const text = String(value).trim();
+  if (!text) return '';
+
+  if (/^\d{4}-\d{2}-\d{2}$/.test(text)) return text;
+
+  // Google Visualization can expose raw dates as Date(YYYY,M,D), where M is
+  // zero-based. Accept that form in addition to the formatted cell value.
+  const gvizDate = text.match(/^Date\((\d{4}),(\d{1,2}),(\d{1,2})\)$/i);
+  if (gvizDate) {
+    const year = Number(gvizDate[1]);
+    const month = Number(gvizDate[2]) + 1;
+    const day = Number(gvizDate[3]);
+    return `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+  }
+
+  // Common spreadsheet display formats used by the project.
+  const ymd = text.match(/^(\d{4})[\/-](\d{1,2})[\/-](\d{1,2})$/);
+  if (ymd) {
+    const year = Number(ymd[1]);
+    const month = Number(ymd[2]);
+    const day = Number(ymd[3]);
+    const date = new Date(year, month - 1, day);
+    if (date.getFullYear() === year && date.getMonth() === month - 1 && date.getDate() === day) {
+      return dateInputValue(date);
+    }
+  }
+
+  const dmy = text.match(/^(\d{1,2})[\/-](\d{1,2})[\/-](\d{4})$/);
+  if (dmy) {
+    const day = Number(dmy[1]);
+    const month = Number(dmy[2]);
+    const year = Number(dmy[3]);
+    const date = new Date(year, month - 1, day);
+    if (date.getFullYear() === year && date.getMonth() === month - 1 && date.getDate() === day) {
+      return dateInputValue(date);
+    }
+  }
+
+  const date = new Date(text);
   if (Number.isNaN(date.getTime())) return '';
   return dateInputValue(date);
 }

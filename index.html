@@ -109,7 +109,14 @@
             <h3>Transaction Log</h3>
           </div>
           <div class="ledger-tools ledger-filter-tools">
-            <label class="ledger-month-control">
+            <label class="ledger-scope-control">
+              <span>View</span>
+              <select id="ledgerScope" class="ledger-scope-select" aria-label="Transaction history view">
+                <option value="ALL" selected>All transactions</option>
+                <option value="MONTH">By month</option>
+              </select>
+            </label>
+            <label id="ledgerMonthControl" class="ledger-month-control is-hidden">
               <span>Month</span>
               <input id="ledgerMonth" type="month" aria-label="Transaction month" />
             </label>
@@ -128,7 +135,7 @@
           <span class="ledger-inline-spinner" aria-hidden="true"></span>
           <div>
             <strong>Loading transaction history…</strong>
-            <small>Account identity is already available while this month loads.</small>
+            <small>Account identity is already available while the ledger loads.</small>
           </div>
         </div>
 
@@ -241,7 +248,7 @@
 
       <div class="teller-nav-swipe-hint" aria-hidden="true"><span>SWIPE FOR MORE</span><b>↔</b></div>
       <nav id="tellerNav" class="teller-nav">
-        <button class="active" data-panel="lastBalancePanel" type="button"><span>01</span> Last Saldo Input</button>
+        <button class="active" data-panel="lastBalancePanel" type="button"><span>01</span> Migrating &amp; NPC Source</button>
         <button data-panel="transferPanel" type="button"><span>02</span> Personal Transfer</button>
         <button data-panel="salaryPanel" type="button"><span>03</span> Shop & Office Salary</button>
         <button data-panel="rewardPanel" type="button"><span>04</span> Rewards</button>
@@ -286,8 +293,8 @@
         <section id="lastBalancePanel" class="teller-panel active">
           <div class="panel-description">
             <div>
-              <h3>Last Saldo Input</h3>
-              <p>Single-sided balance migration. No sender account is required.</p>
+              <h3>Migrating &amp; NPC Source</h3>
+              <p>Use this feature to migrate an account balance or draw funds from an NPC source. No sender account is required.</p>
             </div>
             <div class="panel-controls">
               <div class="description-mode-control">
@@ -547,11 +554,18 @@
           <div class="panel-description report-heading">
             <div>
               <h3>Transaction Inputs</h3>
-              <p>Monthly input register with staff attribution and revision controls.</p>
+              <p>Complete transaction input register with staff attribution and revision controls. View all transactions or narrow the register to a specific month.</p>
             </div>
             <div class="report-actions">
-              <input id="reportMonth" type="month" />
-              <button id="loadReportButton" class="secondary-button" type="button">LOAD MONTH</button>
+              <label class="report-scope-control">
+                <span>View</span>
+                <select id="reportScope" aria-label="Transaction input register view">
+                  <option value="ALL" selected>All transactions</option>
+                  <option value="MONTH">By month</option>
+                </select>
+              </label>
+              <input id="reportMonth" class="is-hidden" type="month" aria-label="Transaction input month" />
+              <button id="loadReportButton" class="secondary-button" type="button">LOAD ALL</button>
               <div class="report-search">
                 <input id="reportSearchInput" type="search" placeholder="Transaction ID" autocomplete="off" aria-label="Search transaction ID" />
                 <button id="reportSearchButton" class="report-search-icon" type="button" aria-label="Search transaction ID" title="Search">⌕</button>
@@ -565,7 +579,7 @@
             <div class="report-letterhead">
               <div>
                 <span>ZAIGEN OFFICE</span>
-                <strong>MONTHLY TRANSACTION INPUT REGISTER</strong>
+                <strong>TRANSACTION INPUT REGISTER</strong>
               </div>
               <div id="reportMonthLabel">—</div>
             </div>
@@ -587,8 +601,8 @@
             </div>
             <div id="reportEmpty" class="empty-state is-hidden">
               <div>◇</div>
-              <strong>No records for this month</strong>
-              <span>Select another month or process new transactions.</span>
+              <strong>No transaction inputs found</strong>
+              <span>Choose another view or process new transactions.</span>
             </div>
           </div>
         </section>
@@ -670,7 +684,7 @@
       <button class="modal-close" type="button" data-close-modal="editTransactionModal">×</button>
       <p class="eyebrow">REVISION WINDOW</p>
       <h2 id="editTransactionTitle">Edit Transaction</h2>
-      <p class="modal-intro">Transactions can only be revised within one month of creation. Paired sender/recipient log rows are revised together from this window.</p>
+      <p class="modal-intro">Transactions can be revised at any time. Paired sender/recipient log rows are revised together from this window.</p>
       <div id="editTransactionRoute" class="edit-transaction-route" aria-live="polite"></div>
       <form id="editTransactionForm" class="stack-form">
         <input id="editTransactionId" type="hidden" />
