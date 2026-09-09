@@ -35,6 +35,19 @@ const CONFIG = {
   REPORT_LOAD_CONCURRENCY: 4
 };
 
+const NAVIGATION = {
+  STATE_KEY: 'zaigenNavigation',
+  VERSION: 1,
+  TELLER_PANELS: new Set([
+    'lastBalancePanel',
+    'transferPanel',
+    'salaryPanel',
+    'rewardPanel',
+    'reportsPanel',
+    'allAccountsPanel'
+  ])
+};
+
 const state = {
   master: [],
   masterMap: new Map(),
@@ -54,6 +67,8 @@ const state = {
   reportLoadToken: 0,
   reportMonths: [],
   syncingSharedData: false,
+  navigationRestoring: false,
+  navigationInitialized: false,
   batchModes: {
     TRANSFER: 'STANDARD',
     SALARY: 'STANDARD',
@@ -88,6 +103,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   document.body.classList.add('home-view-active');
   updateMobilePublicNavigation('home');
   updateTellerSessionUi();
+  initializeBrowserNavigation();
   bindGlobalEvents();
   initializeRowControls();
   setDefaultMonth();
@@ -234,14 +250,14 @@ function installBatchUtilityControls() {
 function bindGlobalEvents() {
   els.headerSearchForm.addEventListener('submit', e => {
     e.preventDefault();
-    searchAccount(els.headerSearchInput.value);
+    searchAccount(els.headerSearchInput.value, false, 'push');
   });
 
   els.heroSearchForm.addEventListener('submit', e => {
     e.preventDefault();
     const value = els.heroSearchInput.value.trim();
     els.headerSearchInput.value = value;
-    searchAccount(value);
+    searchAccount(value, false, 'push');
   });
 
   els.refreshAccountButton.addEventListener('click', () => {
@@ -252,12 +268,14 @@ function bindGlobalEvents() {
     state.currentLedgerScope = els.ledgerScope.value === 'MONTH' ? 'MONTH' : 'ALL';
     updateLedgerScopeUi();
     renderCurrentLedgerSelection();
+    refreshCurrentNavigationState();
   });
 
   els.ledgerMonth.addEventListener('change', () => {
     if (!state.currentAccount || !els.ledgerMonth.value) return;
     state.currentLedgerMonth = els.ledgerMonth.value;
     if (state.currentLedgerScope === 'MONTH') renderCurrentLedgerSelection();
+    refreshCurrentNavigationState();
   });
 
   els.ledgerScrollTop.addEventListener('click', () => {
@@ -289,7 +307,7 @@ function bindGlobalEvents() {
 
   els.tellerButton.addEventListener('click', () => {
     if (state.teller) {
-      openTellerWorkspace();
+      openTellerWorkspace('push');
     } else {
       openModal('tellerLoginModal');
     }
@@ -307,7 +325,7 @@ function bindGlobalEvents() {
     els.tellerPasswordToggle.addEventListener('click', toggleTellerPasswordVisibility);
   }
   els.tellerLogoutButton.addEventListener('click', logoutTeller);
-  els.closeWorkspaceButton.addEventListener('click', closeTellerWorkspace);
+  els.closeWorkspaceButton.addEventListener('click', closeTellerDeskFromUi);
 
   $$('[data-close-modal]').forEach(el => {
     el.addEventListener('click', () => closeModal(el.dataset.closeModal));
@@ -316,7 +334,7 @@ function bindGlobalEvents() {
   els.tellerNav.addEventListener('click', event => {
     const button = event.target.closest('[data-panel]');
     if (!button) return;
-    switchTellerPanel(button.dataset.panel, button);
+    switchTellerPanel(button.dataset.panel, button, 'push');
   });
 
   $$('.row-count-input').forEach(input => {
@@ -773,6 +791,240 @@ function renderAllAccounts() {
   });
 }
 
+
+/* =========================================================
+   IN-APP BROWSER HISTORY
+   Browser Back/Forward follows ZAIGEN's own pages and teller
+   menus before the browser is allowed to leave the website.
+========================================================= */
+
+function initializeBrowserNavigation() {
+  if (state.navigationInitialized) return;
+  state.navigationInitialized = true;
+
+  const current = normalizeNavigationState(window.history.state);
+
+  if (!current) {
+    const homeState = createNavigationState('home');
+
+    // Replace the raw browser entry with an app-aware HOME entry, then add
+    // one HOME guard entry. This prevents the very first Back press from
+    // immediately closing/leaving the site when there is no in-app page yet.
+    window.history.replaceState(homeState, document.title, window.location.href);
+    window.history.pushState(homeState, document.title, window.location.href);
+  }
+
+  window.addEventListener('popstate', handleBrowserPopState);
+}
+
+function createNavigationState(view, details = {}) {
+  const next = {
+    [NAVIGATION.STATE_KEY]: NAVIGATION.VERSION,
+    view
+  };
+
+  if (view === 'account') {
+    next.account = normalizeAccount(details.account || state.currentAccount);
+    next.ledgerScope = details.ledgerScope === 'MONTH' ? 'MONTH' : 'ALL';
+    next.ledgerMonth = normalizeLedgerMonth(
+      details.ledgerMonth || state.currentLedgerMonth || currentMonthValue()
+    );
+  }
+
+  if (view === 'teller') {
+    next.panel = NAVIGATION.TELLER_PANELS.has(details.panel)
+      ? details.panel
+      : getActiveTellerPanelId();
+  }
+
+  return next;
+}
+
+function normalizeNavigationState(value) {
+  if (!value || Number(value[NAVIGATION.STATE_KEY]) !== NAVIGATION.VERSION) {
+    return null;
+  }
+
+  if (value.view === 'home') {
+    return createNavigationState('home');
+  }
+
+  if (value.view === 'account') {
+    const account = normalizeAccount(value.account);
+    if (!account) return createNavigationState('home');
+
+    return createNavigationState('account', {
+      account,
+      ledgerScope: value.ledgerScope,
+      ledgerMonth: value.ledgerMonth
+    });
+  }
+
+  if (value.view === 'teller') {
+    return createNavigationState('teller', {
+      panel: value.panel
+    });
+  }
+
+  return null;
+}
+
+function navigationStatesEqual(a, b) {
+  const left = normalizeNavigationState(a);
+  const right = normalizeNavigationState(b);
+
+  if (!left || !right || left.view !== right.view) return false;
+
+  if (left.view === 'home') return true;
+
+  if (left.view === 'account') {
+    return (
+      left.account === right.account &&
+      left.ledgerScope === right.ledgerScope &&
+      left.ledgerMonth === right.ledgerMonth
+    );
+  }
+
+  if (left.view === 'teller') {
+    return left.panel === right.panel;
+  }
+
+  return false;
+}
+
+function writeNavigationState(nextState, mode = 'push') {
+  if (
+    state.navigationRestoring ||
+    mode === 'none' ||
+    !state.navigationInitialized
+  ) {
+    return;
+  }
+
+  const normalized = normalizeNavigationState(nextState);
+  if (!normalized) return;
+
+  const current = normalizeNavigationState(window.history.state);
+
+  if (mode === 'replace') {
+    window.history.replaceState(normalized, document.title, window.location.href);
+    return;
+  }
+
+  if (navigationStatesEqual(current, normalized)) {
+    return;
+  }
+
+  window.history.pushState(normalized, document.title, window.location.href);
+}
+
+function refreshCurrentNavigationState() {
+  if (
+    state.navigationRestoring ||
+    !state.navigationInitialized ||
+    !state.currentAccount ||
+    els.accountView.classList.contains('is-hidden') ||
+    !els.tellerWorkspace.classList.contains('is-hidden')
+  ) {
+    return;
+  }
+
+  writeNavigationState(createNavigationState('account', {
+    account: state.currentAccount,
+    ledgerScope: state.currentLedgerScope,
+    ledgerMonth: state.currentLedgerMonth
+  }), 'replace');
+}
+
+function getActiveTellerPanelId() {
+  const active = $('.teller-panel.active');
+  return NAVIGATION.TELLER_PANELS.has(active?.id)
+    ? active.id
+    : 'lastBalancePanel';
+}
+
+function getCurrentPublicNavigationState() {
+  if (
+    state.currentAccount &&
+    !els.accountView.classList.contains('is-hidden')
+  ) {
+    return createNavigationState('account', {
+      account: state.currentAccount,
+      ledgerScope: state.currentLedgerScope,
+      ledgerMonth: state.currentLedgerMonth
+    });
+  }
+
+  return createNavigationState('home');
+}
+
+async function handleBrowserPopState(event) {
+  const target = normalizeNavigationState(event.state);
+
+  // A non-ZAIGEN history entry belongs to the browser/site that existed before
+  // this app. Internal ZAIGEN entries are always handled here.
+  if (!target) return;
+
+  state.navigationRestoring = true;
+
+  try {
+    if (target.view === 'home') {
+      goToHome('none');
+      return;
+    }
+
+    if (target.view === 'account') {
+      closeTellerWorkspace();
+      $$('.modal-shell:not(.is-hidden)').forEach(modal => closeModal(modal.id));
+
+      state.currentLedgerScope = target.ledgerScope;
+      state.currentLedgerMonth = target.ledgerMonth;
+
+      await searchAccount(target.account, true, 'none');
+
+      if (state.currentAccount === target.account) {
+        state.currentLedgerScope = target.ledgerScope;
+        state.currentLedgerMonth = target.ledgerMonth;
+        els.ledgerScope.value = target.ledgerScope;
+        els.ledgerMonth.value = target.ledgerMonth;
+        updateLedgerScopeUi();
+
+        if (state.currentAllTransactions.length) {
+          renderCurrentLedgerSelection();
+        }
+      }
+      return;
+    }
+
+    if (target.view === 'teller') {
+      $$('.modal-shell:not(.is-hidden)').forEach(modal => closeModal(modal.id));
+
+      // Never reopen an authorized workspace after its teller session has
+      // expired or been logged out.
+      if (!state.teller) {
+        closeTellerWorkspace();
+
+        if (state.currentAccount) {
+          await searchAccount(state.currentAccount, true, 'none');
+        } else {
+          goToHome('none');
+        }
+        return;
+      }
+
+      openTellerWorkspace('none');
+
+      const button = $$('#tellerNav button').find(
+        btn => btn.dataset.panel === target.panel
+      );
+
+      switchTellerPanel(target.panel, button, 'none');
+    }
+  } finally {
+    state.navigationRestoring = false;
+  }
+}
+
 function handleLedgerNavigationClick(event) {
   const trigger = event.target.closest('[data-open-ledger]');
   if (!trigger) return;
@@ -794,10 +1046,10 @@ function openLedgerFromLink(account) {
 
   els.headerSearchInput.value = account;
   els.heroSearchInput.value = account;
-  searchAccount(account);
+  searchAccount(account, false, 'push');
 }
 
-function goToHome() {
+function goToHome(navigationMode = 'push') {
   // Home navigation never logs the teller out.
   closeTellerWorkspace();
   $$('.modal-shell:not(.is-hidden)').forEach(modal => closeModal(modal.id));
@@ -815,6 +1067,7 @@ function goToHome() {
   els.heroSearchInput.value = '';
   updateMobilePublicNavigation('home');
 
+  writeNavigationState(createNavigationState('home'), navigationMode);
   window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
@@ -860,7 +1113,7 @@ function handleMobileAppNavigation(event) {
   if (action === 'teller') {
     updateMobilePublicNavigation('teller');
     if (state.teller) {
-      openTellerWorkspace();
+      openTellerWorkspace('push');
     } else {
       openModal('tellerLoginModal');
     }
@@ -892,7 +1145,7 @@ function xProfileUrl(value) {
   return username ? `https://x.com/${encodeURIComponent(username)}` : '';
 }
 
-async function searchAccount(rawAccount, silent = false) {
+async function searchAccount(rawAccount, silent = false, navigationMode = 'push') {
   const account = normalizeAccount(rawAccount);
 
   if (!account) {
@@ -946,6 +1199,12 @@ async function searchAccount(rawAccount, silent = false) {
   els.ledgerScope.value = state.currentLedgerScope;
   els.ledgerMonth.value = state.currentLedgerMonth;
   updateLedgerScopeUi();
+
+  writeNavigationState(createNavigationState('account', {
+    account,
+    ledgerScope: state.currentLedgerScope,
+    ledgerMonth: state.currentLedgerMonth
+  }), navigationMode);
 
   // Identity is now visible. Transaction history loads independently below.
   if (!silent) {
@@ -1300,7 +1559,7 @@ async function loginTeller(event) {
     persistTellerSession(teller);
     updateTellerSessionUi();
     closeModal('tellerLoginModal');
-    openTellerWorkspace();
+    openTellerWorkspace('push');
     toast(`Teller access granted to ${teller.name}.`, 'success');
   } catch (error) {
     toast(error.message, 'error');
@@ -1446,13 +1705,17 @@ function getTellerPhotoUrl(teller) {
   return normalizeImageUrl(record?.photo) || fallbackAvatar(teller.name || 'Staff');
 }
 
-function openTellerWorkspace() {
+function openTellerWorkspace(navigationMode = 'push') {
   if (!state.teller) return;
   els.tellerWorkspace.classList.remove('is-hidden');
   els.tellerWorkspace.setAttribute('aria-hidden', 'false');
   document.body.classList.add('teller-workspace-open');
   document.body.style.overflow = 'hidden';
   updateMobilePublicNavigation('teller');
+
+  writeNavigationState(createNavigationState('teller', {
+    panel: getActiveTellerPanelId()
+  }), navigationMode);
 }
 
 function closeTellerWorkspace() {
@@ -1463,14 +1726,26 @@ function closeTellerWorkspace() {
   updateMobilePublicNavigation(state.currentAccount ? 'account' : 'home');
 }
 
-function switchTellerPanel(panelId, button) {
+function closeTellerDeskFromUi() {
+  closeTellerWorkspace();
+  writeNavigationState(getCurrentPublicNavigationState(), 'push');
+}
+
+function switchTellerPanel(panelId, button, navigationMode = 'push') {
+  if (!NAVIGATION.TELLER_PANELS.has(panelId)) return;
+
+  const targetButton = button ||
+    $$('#tellerNav button').find(btn => btn.dataset.panel === panelId);
+
   $$('.teller-panel').forEach(panel => panel.classList.toggle('active', panel.id === panelId));
-  $$('#tellerNav button').forEach(btn => btn.classList.toggle('active', btn === button));
+  $$('#tellerNav button').forEach(btn => btn.classList.toggle('active', btn === targetButton));
 
   if (panelId === 'reportsPanel') loadMonthlyReport();
   if (panelId === 'allAccountsPanel') {
     refreshSharedData().then(renderAllAccounts);
   }
+
+  writeNavigationState(createNavigationState('teller', { panel: panelId }), navigationMode);
 
   if (window.matchMedia('(max-width: 780px)').matches) {
     const content = $('.workspace-content');
