@@ -250,7 +250,7 @@
       <nav id="tellerNav" class="teller-nav">
         <button class="active" data-panel="lastBalancePanel" type="button"><span>01</span> Migrating &amp; NPC Source</button>
         <button data-panel="transferPanel" type="button"><span>02</span> Personal Transfer</button>
-        <button data-panel="salaryPanel" type="button"><span>03</span> Shop & Office Salary</button>
+        <button data-panel="salaryPanel" type="button"><span>03</span> Salary / Royalty</button>
         <button data-panel="rewardPanel" type="button"><span>04</span> Rewards</button>
         <button data-panel="reportsPanel" type="button"><span>05</span> Transaction Inputs</button>
         <button data-panel="allAccountsPanel" type="button"><span>06</span> All Accounts</button>
@@ -415,7 +415,7 @@
         <section id="salaryPanel" class="teller-panel">
           <div class="panel-description">
             <div>
-              <h3>Shop & Office Salary / Royalty</h3>
+              <h3>Salary / Royalty</h3>
               <p>For salary and royalty payments by institutions, offices, or shops. SOURCE accounts are limited to OFFICE/SHOP accounts only.</p>
             </div>
             <div class="panel-controls">
@@ -554,7 +554,7 @@
           <div class="panel-description report-heading">
             <div>
               <h3>Transaction Inputs</h3>
-              <p>Complete transaction input register with staff attribution and revision controls. View all transactions or narrow the register to a specific month.</p>
+              <p>View or edit specific transactions or narrow the register to a specific month.</p>
             </div>
             <div class="report-actions">
               <label class="report-scope-control">
@@ -572,6 +572,14 @@
               </div>
               <button id="exportPdfButton" class="secondary-button" type="button">PDF</button>
               <button id="exportPngButton" class="secondary-button" type="button">PNG</button>
+            </div>
+          </div>
+
+          <div id="reportLoadStatus" class="report-load-status is-hidden" role="status" aria-live="polite">
+            <span class="report-load-status-spinner" aria-hidden="true"></span>
+            <div class="report-load-status-copy">
+              <strong id="reportLoadStatusTitle">Loading latest transactions…</strong>
+              <small id="reportLoadStatusDetail">The register is opening now while history loads in the background.</small>
             </div>
           </div>
 

@@ -8059,3 +8059,82 @@ body {
     order: 11;
   }
 }
+
+
+/* =========================================================
+   TRANSACTION INPUTS — PROGRESSIVE FAST OPEN
+   The register opens immediately, shows the newest records first,
+   and continues loading older history without a full-screen block.
+========================================================= */
+
+.report-load-status {
+  min-height: 56px;
+  margin: 0 0 14px;
+  padding: 11px 14px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  border: 1px solid rgba(141,100,30,.18);
+  border-radius: 14px;
+  background:
+    linear-gradient(135deg, rgba(255,255,255,.84), rgba(245,239,212,.74));
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.82),
+    0 10px 24px rgba(8,19,26,.045);
+}
+
+.report-load-status-spinner {
+  width: 22px;
+  height: 22px;
+  flex: 0 0 auto;
+  border: 2px solid rgba(141,100,30,.16);
+  border-top-color: var(--gold);
+  border-radius: 50%;
+  animation: reportLoadSpin .72s linear infinite;
+}
+
+.report-load-status-copy {
+  min-width: 0;
+  display: grid;
+  gap: 2px;
+}
+
+.report-load-status-copy strong {
+  color: var(--navy-deep);
+  font-size: 11px;
+  line-height: 1.35;
+  font-weight: 800;
+  letter-spacing: .01em;
+}
+
+.report-load-status-copy small {
+  color: var(--muted);
+  font-size: 9px;
+  line-height: 1.45;
+}
+
+@keyframes reportLoadSpin {
+  to { transform: rotate(360deg); }
+}
+
+@media (max-width: 780px) {
+  .report-load-status {
+    min-height: 52px;
+    margin-bottom: 12px;
+    padding: 10px 12px;
+    border-radius: 13px;
+  }
+
+  .report-load-status-spinner {
+    width: 20px;
+    height: 20px;
+  }
+
+  .report-load-status-copy strong {
+    font-size: 10px;
+  }
+
+  .report-load-status-copy small {
+    font-size: 8px;
+  }
+}

@@ -32,7 +32,8 @@ const CONFIG = {
   MUTATION_VERIFY_INTERVAL_MS: 450,
   MUTATION_VERIFY_TIMEOUT_MS: 4200,
   MUTATION_MAX_ATTEMPTS: 2,
-  REPORT_LOAD_CONCURRENCY: 4
+  REPORT_LOAD_CONCURRENCY: 4,
+  REPORT_INITIAL_GROUPS: 5
 };
 
 const NAVIGATION = {
@@ -66,6 +67,7 @@ const state = {
   reportScope: 'ALL',
   reportLoadToken: 0,
   reportMonths: [],
+  reportFullLoadPromise: null,
   syncingSharedData: false,
   navigationRestoring: false,
   navigationInitialized: false,
@@ -137,7 +139,7 @@ function cacheElements() {
     'tellerButton','tellerLoginModal','tellerLoginForm','tellerIdInput','tellerPasswordInput','tellerWorkspace',
     'loggedTellerName','loggedTellerId','tellerLogoutButton','closeWorkspaceButton','tellerNav',
     'loadingOverlay','loadingText','toastRegion','reportScope','reportMonth','loadReportButton','reportSearchInput','reportSearchButton','exportPdfButton','exportPngButton',
-    'reportMonthLabel','reportTableBody','reportEmpty','reportDocument','editTransactionModal','editTransactionForm',
+    'reportMonthLabel','reportTableBody','reportEmpty','reportDocument','reportLoadStatus','reportLoadStatusTitle','reportLoadStatusDetail','editTransactionModal','editTransactionForm',
     'editTransactionId','editTransactionDate','editTransactionAmount','editTransactionDescription','editTransactionStaff',
     'bankLogo','workspaceLogo','tellerLoginLogo','tellerPasswordToggle','allAccountSearch','allAccountStatusFilter','allAccountTableBody',
     'allAccountTotal','allAccountBalance','allAccountActive','allAccountFrozen','allAccountCountLabel',
@@ -392,7 +394,7 @@ function bindGlobalEvents() {
     button.addEventListener('click', () => processBatch(button.dataset.process, button));
   });
 
-  els.loadReportButton.addEventListener('click', loadMonthlyReport);
+  els.loadReportButton.addEventListener('click', () => loadMonthlyReport({ force: true }));
   els.reportScope.addEventListener('change', () => {
     state.reportScope = els.reportScope.value === 'MONTH' ? 'MONTH' : 'ALL';
     updateReportScopeUi();
@@ -3103,38 +3105,98 @@ function updateReportScopeUi() {
   }
 }
 
-async function loadMonthlyReport() {
-  if (!state.teller) return;
+function setReportLoadStatus(title = '', detail = '', visible = true) {
+  if (!els.reportLoadStatus) return;
 
+  els.reportLoadStatus.classList.toggle('is-hidden', !visible);
+
+  if (els.reportLoadStatusTitle && title) {
+    els.reportLoadStatusTitle.textContent = title;
+  }
+
+  if (els.reportLoadStatusDetail && detail) {
+    els.reportLoadStatusDetail.textContent = detail;
+  }
+}
+
+function hideReportLoadStatus() {
+  if (els.reportLoadStatus) {
+    els.reportLoadStatus.classList.add('is-hidden');
+  }
+}
+
+async function loadMonthlyReport(options = {}) {
+  if (!state.teller) return [];
+
+  const force = Boolean(options?.force);
   const scope = state.reportScope === 'MONTH' ? 'MONTH' : 'ALL';
   const selectedMonth = els.reportMonth.value || currentMonthValue();
   const token = ++state.reportLoadToken;
 
-  showLoading(scope === 'MONTH' ? 'Loading monthly register…' : 'Loading complete transaction register…');
+  /*
+    TRANSACTION INPUTS now opens immediately.
+
+    The old version blocked the whole Teller Desk with showLoading() while ALL
+    months were discovered and every monthlyLog request finished. With a long
+    history that meant the user stared at a full-screen loader even though the
+    panel itself was already available.
+
+    New behavior:
+      1) Open the panel immediately.
+      2) For ALL, fetch the newest month(s) only until at least five transaction
+         groups are available, then render those immediately.
+      3) Load older months in the background with the existing concurrency.
+      4) Replace the preview with the complete register when background loading
+         finishes.
+      5) MONTH mode still returns the complete selected month, but uses an
+         inline status instead of blocking the whole workspace.
+  */
+
+  if (scope === 'MONTH') {
+    state.reportFullLoadPromise = null;
+    setReportLoadStatus(
+      `Loading ${monthLabel(selectedMonth)}…`,
+      'The Transaction Inputs panel is ready while the selected month loads.',
+      true
+    );
+
+    try {
+      const rows = await loadReportMonthRows(selectedMonth);
+
+      if (token !== state.reportLoadToken) return [];
+
+      state.reportRows = rows;
+
+      if (els.reportSearchInput?.value.trim()) {
+        await searchTransactionInputs({ skipFullLoadWait: true });
+      } else {
+        renderMonthlyReport(state.reportRows, selectedMonth);
+      }
+
+      return rows;
+    } catch (error) {
+      if (token !== state.reportLoadToken) return [];
+      toast(error.message || 'Unable to load transaction inputs.', 'error');
+      return [];
+    } finally {
+      if (token === state.reportLoadToken) hideReportLoadStatus();
+    }
+  }
+
+  const fullLoadPromise = loadAllReportRowsProgressively({
+    token,
+    selectedMonth,
+    force
+  });
+
+  state.reportFullLoadPromise = fullLoadPromise;
 
   try {
-    let rows = [];
-
-    if (scope === 'MONTH') {
-      rows = await loadReportMonthRows(selectedMonth);
-    } else {
-      rows = await loadAllReportRows();
-    }
-
-    if (token !== state.reportLoadToken) return;
-
-    state.reportRows = rows;
-
-    if (els.reportSearchInput?.value.trim()) {
-      searchTransactionInputs();
-    } else {
-      renderMonthlyReport(state.reportRows, selectedMonth);
-    }
-  } catch (error) {
-    if (token !== state.reportLoadToken) return;
-    toast(error.message || 'Unable to load transaction inputs.', 'error');
+    return await fullLoadPromise;
   } finally {
-    if (token === state.reportLoadToken) hideLoading();
+    if (state.reportFullLoadPromise === fullLoadPromise) {
+      state.reportFullLoadPromise = null;
+    }
   }
 }
 
@@ -3163,6 +3225,171 @@ async function discoverTransactionMonths() {
   return months;
 }
 
+async function loadReportMonthWithRetry(month) {
+  let lastError = null;
+
+  for (let attempt = 1; attempt <= 2; attempt++) {
+    try {
+      return {
+        month,
+        rows: await loadReportMonthRows(month),
+        error: null
+      };
+    } catch (error) {
+      lastError = error;
+      if (attempt < 2) await delay(350);
+    }
+  }
+
+  return {
+    month,
+    rows: [],
+    error: lastError || new Error('Unknown report loading error')
+  };
+}
+
+async function loadAllReportRowsProgressively({ token, selectedMonth }) {
+  /*
+    A previously loaded ALL register remains visible while a fresh background
+    refresh starts. This makes repeat visits to Transaction Inputs feel
+    instantaneous without changing any transaction data or revision logic.
+  */
+  if (state.reportRows.length && !els.reportSearchInput?.value.trim()) {
+    renderMonthlyReport(state.reportRows, selectedMonth);
+  }
+
+  setReportLoadStatus(
+    'Loading latest transactions…',
+    `Opening the newest ${CONFIG.REPORT_INITIAL_GROUPS} transactions first. Older history will follow automatically.`,
+    true
+  );
+
+  let months = [];
+
+  try {
+    months = await discoverTransactionMonths();
+  } catch (error) {
+    if (token === state.reportLoadToken) {
+      hideReportLoadStatus();
+      toast(error.message || 'Unable to read transaction months.', 'error');
+    }
+    return state.reportRows || [];
+  }
+
+  if (token !== state.reportLoadToken) return [];
+
+  if (!months.length) {
+    state.reportRows = [];
+    renderMonthlyReport([], selectedMonth);
+    hideReportLoadStatus();
+    return [];
+  }
+
+  const previewRows = [];
+  const previewMonths = [];
+  const previewResults = [];
+
+  /*
+    Load newest months one at a time only until enough groups exist. Usually
+    the current/latest month alone supplies the first five visible records, so
+    the user gets useful content after one monthlyLog request instead of after
+    every historical month has completed.
+  */
+  for (const month of months) {
+    if (token !== state.reportLoadToken) return [];
+
+    const result = await loadReportMonthWithRetry(month);
+    previewMonths.push(month);
+    previewResults.push(result);
+
+    if (!result.error) {
+      previewRows.push(...(result.rows || []));
+    }
+
+    const previewGroups = groupReportTransactions(previewRows);
+
+    if (previewGroups.length >= CONFIG.REPORT_INITIAL_GROUPS) {
+      state.reportRows = previewRows;
+
+      if (!els.reportSearchInput?.value.trim()) {
+        renderMonthlyReportGroups(
+          previewGroups.slice(0, CONFIG.REPORT_INITIAL_GROUPS),
+          selectedMonth
+        );
+      }
+
+      setReportLoadStatus(
+        `${Math.min(CONFIG.REPORT_INITIAL_GROUPS, previewGroups.length)} latest transactions ready`,
+        'Loading older transaction history in the background…',
+        true
+      );
+      break;
+    }
+  }
+
+  if (token !== state.reportLoadToken) return [];
+
+  /*
+    If the entire history contains fewer than five groups, still show whatever
+    has already been found before finishing.
+  */
+  if (previewRows.length && !els.reportSearchInput?.value.trim()) {
+    const previewGroups = groupReportTransactions(previewRows);
+    renderMonthlyReportGroups(
+      previewGroups.slice(0, CONFIG.REPORT_INITIAL_GROUPS),
+      selectedMonth
+    );
+    state.reportRows = previewRows;
+  }
+
+  const loadedMonthSet = new Set(previewMonths);
+  const remainingMonths = months.filter(month => !loadedMonthSet.has(month));
+
+  const backgroundResults = await mapWithConcurrency(
+    remainingMonths,
+    CONFIG.REPORT_LOAD_CONCURRENCY,
+    month => loadReportMonthWithRetry(month)
+  );
+
+  if (token !== state.reportLoadToken) return [];
+
+  const allResults = [
+    ...previewResults,
+    ...backgroundResults
+  ];
+
+  const failed = allResults.filter(result => result.error);
+  const successfulRows = allResults.flatMap(result => result.rows || []);
+
+  if (failed.length && !successfulRows.length) {
+    hideReportLoadStatus();
+    throw new Error(`Transaction register could not be loaded. ${failed[0].error?.message || ''}`.trim());
+  }
+
+  state.reportRows = successfulRows;
+
+  if (els.reportSearchInput?.value.trim()) {
+    await searchTransactionInputs({ skipFullLoadWait: true });
+  } else {
+    renderMonthlyReport(state.reportRows, selectedMonth);
+  }
+
+  hideReportLoadStatus();
+
+  if (failed.length) {
+    const labels = failed.slice(0, 3).map(result => monthLabel(result.month)).join(', ');
+    const extra = failed.length > 3 ? ` +${failed.length - 3} more` : '';
+    toast(`Most transaction history loaded, but ${labels}${extra} could not be read.`, 'error');
+  }
+
+  return successfulRows;
+}
+
+/*
+  Compatibility helper retained for any existing internal calls that expect a
+  complete ALL result. It keeps the original full-history behavior but is no
+  longer used to block the first paint of Transaction Inputs.
+*/
 async function loadAllReportRows() {
   const months = await discoverTransactionMonths();
   if (!months.length) return [];
@@ -3170,28 +3397,7 @@ async function loadAllReportRows() {
   const results = await mapWithConcurrency(
     months,
     CONFIG.REPORT_LOAD_CONCURRENCY,
-    async month => {
-      let lastError = null;
-
-      for (let attempt = 1; attempt <= 2; attempt++) {
-        try {
-          return {
-            month,
-            rows: await loadReportMonthRows(month),
-            error: null
-          };
-        } catch (error) {
-          lastError = error;
-          if (attempt < 2) await delay(350);
-        }
-      }
-
-      return {
-        month,
-        rows: [],
-        error: lastError || new Error('Unknown report loading error')
-      };
-    }
+    month => loadReportMonthWithRetry(month)
   );
 
   const failed = results.filter(result => result.error);
@@ -3296,7 +3502,25 @@ function findReportTransactionGroup(groupKey) {
   return groupReportTransactions(state.reportRows).find(group => group.key === groupKey || group.displayId === groupKey) || null;
 }
 
-function searchTransactionInputs() {
+async function searchTransactionInputs(options = {}) {
+  if (
+    !options?.skipFullLoadWait &&
+    state.reportScope === 'ALL' &&
+    state.reportFullLoadPromise
+  ) {
+    setReportLoadStatus(
+      'Finishing transaction history…',
+      'Completing older records before searching the full register.',
+      true
+    );
+
+    try {
+      await state.reportFullLoadPromise;
+    } catch (error) {
+      console.warn('Background report completion failed before search:', error);
+    }
+  }
+
   const query = String(els.reportSearchInput?.value || '').trim().toLowerCase();
 
   if (!query) {
@@ -3718,6 +3942,19 @@ async function fetchPublicTransactionById(txId) {
 }
 
 async function exportReportPng() {
+  if (state.reportScope === 'ALL' && state.reportFullLoadPromise) {
+    setReportLoadStatus(
+      'Finishing transaction history…',
+      'Completing older records before export.',
+      true
+    );
+    try {
+      await state.reportFullLoadPromise;
+    } catch (error) {
+      console.warn('Background report completion failed before export:', error);
+    }
+  }
+
   if (!state.reportRows.length) return toast('Load transaction records first.', 'error');
   showLoading('Rendering PNG…');
   try {
@@ -3737,6 +3974,19 @@ async function exportReportPng() {
 }
 
 async function exportReportPdf() {
+  if (state.reportScope === 'ALL' && state.reportFullLoadPromise) {
+    setReportLoadStatus(
+      'Finishing transaction history…',
+      'Completing older records before export.',
+      true
+    );
+    try {
+      await state.reportFullLoadPromise;
+    } catch (error) {
+      console.warn('Background report completion failed before export:', error);
+    }
+  }
+
   if (!state.reportRows.length) return toast('Load transaction records first.', 'error');
   showLoading('Rendering PDF…');
   try {
